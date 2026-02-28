@@ -9,9 +9,27 @@ import (
 	"strings"
 )
 
-type shortenerMap map[string]string
+type shortenerURLStorage map[string]string
 
-var storage shortenerMap = shortenerMap{}
+func (storage shortenerURLStorage) AddUrl(url string) string {
+	var urlID string
+	addition := ""
+	for {
+		urlID = shortener(url + addition)
+
+		if v, ok := storage[urlID]; !ok {
+			storage[urlID] = url
+			break
+		} else if v == url {
+			break
+		} else {
+			addition += "1"
+		}
+	}
+	return urlID
+}
+
+var storage shortenerURLStorage = shortenerURLStorage{}
 
 func shortener(url string) string {
 	hash := sha256.Sum256([]byte(url))
@@ -61,21 +79,8 @@ func rootHandler(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	fmt.Printf("Body: %s\n", body)
-	var urlID string
 	url := string(body)
-	addition := ""
-	for {
-		urlID = shortener(url + addition)
-
-		if v, ok := storage[urlID]; !ok {
-			storage[urlID] = url
-			break
-		} else if v == url {
-			break
-		} else {
-			addition += "1"
-		}
-	}
+	urlID := storage.AddUrl(url)
 
 	rw.Header().Set("content-type", "text/plain")
 	rw.WriteHeader(http.StatusCreated)
