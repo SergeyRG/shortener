@@ -56,19 +56,19 @@ func rootHandler(rw http.ResponseWriter, req *http.Request) {
 
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		http.Error(rw, fmt.Sprintf("%s", "Bad request"), http.StatusBadRequest)
+		http.Error(rw, "Bad request", http.StatusBadRequest)
 		return
 	}
 
 	fmt.Printf("Body: %s\n", body)
-	var urlId string
+	var urlID string
 	url := string(body)
 	addition := ""
 	for {
-		urlId = shortener(url + addition)
+		urlID = shortener(url + addition)
 
-		if v, ok := storage[urlId]; !ok {
-			storage[urlId] = url
+		if v, ok := storage[urlID]; !ok {
+			storage[urlID] = url
 			break
 		} else if v == url {
 			break
@@ -92,14 +92,14 @@ func redirectHandler(rw http.ResponseWriter, req *http.Request) {
 
 	if req.Method != http.MethodGet {
 
-		http.Error(rw, fmt.Sprintf("%s", "Bad request"), http.StatusBadRequest)
+		http.Error(rw, "Bad request", http.StatusBadRequest)
 		return
 	}
 	id := req.PathValue("id")
 
 	url, ok := storage[id]
 	if !ok {
-		http.Error(rw, fmt.Sprintf("%s", "Bad request"), http.StatusBadRequest)
+		http.Error(rw, "Bad request", http.StatusBadRequest)
 		return
 	}
 
