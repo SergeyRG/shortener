@@ -80,7 +80,7 @@ func rootHandler(rw http.ResponseWriter, req *http.Request) {
 
 	fmt.Printf("Body: %s\n", body)
 	url := string(body)
-	urlID := storage.AddUrl(url)
+	urlID := storage.AddURL(url)
 
 	rw.Header().Set("content-type", "text/plain")
 	rw.WriteHeader(http.StatusCreated)
