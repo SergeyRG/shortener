@@ -11,7 +11,7 @@ import (
 
 type shortenerURLStorage map[string]string
 
-func (storage shortenerURLStorage) AddUrl(url string) string {
+func (storage shortenerURLStorage) AddURL(url string) string {
 	var urlID string
 	addition := ""
 	for {
