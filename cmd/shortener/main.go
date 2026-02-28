@@ -80,7 +80,7 @@ func rootHandler(rw http.ResponseWriter, req *http.Request) {
 	rw.Header().Set("content-type", "text/plain")
 	rw.WriteHeader(http.StatusCreated)
 
-	rw.Write([]byte("http://localhost:8080/" + urlId))
+	rw.Write([]byte("http://localhost:8080/" + urlID))
 
 }
 
