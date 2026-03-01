@@ -11,7 +11,7 @@ func CreateShortURLID(repo repository.RepositoryURL, url string) string {
 	var (
 		urlID    string
 		hash     [32]byte
-		addition string = ""
+		addition = ""
 	)
 
 	for {
