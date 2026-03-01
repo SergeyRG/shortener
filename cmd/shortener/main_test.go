@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/SergeyRG/shortener/internal/handler"
+	"github.com/SergeyRG/shortener/internal/repository"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -65,11 +67,14 @@ func Test_rootHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			repo := repository.NewInMemoryRepositoryURL()
+			mux := http.NewServeMux()
+			mux.HandleFunc("/", handler.RootHandler(repo))
+
 			req := httptest.NewRequest(tt.method, tt.target, tt.body)
 			req.Header.Set("Content-Type", "text/plain")
 			rec := httptest.NewRecorder()
-			h := http.HandlerFunc(rootHandler)
-			h(rec, req)
+			mux.ServeHTTP(rec, req)
 
 			result := rec.Result()
 
@@ -87,6 +92,10 @@ func Test_rootHandler(t *testing.T) {
 }
 
 func Test_redirectHandler(t *testing.T) {
+	type existedURL struct {
+		url string
+		id  string
+	}
 	type want struct {
 		statusCode int
 		body       string
@@ -97,15 +106,18 @@ func Test_redirectHandler(t *testing.T) {
 		target     string
 		method     string
 		body       io.Reader
-		existedURL string
+		existedURL existedURL
 		want       want
 	}{
 		{
-			name:       `Get request to "/{id}" returns a redirection`,
-			target:     "/HGHQZJH6",
-			method:     http.MethodGet,
-			body:       strings.NewReader(``),
-			existedURL: `http://ya.ru`,
+			name:   `Get request to "/{id}" returns a redirection`,
+			target: "/HGHQZJH6",
+			method: http.MethodGet,
+			body:   strings.NewReader(``),
+			existedURL: existedURL{
+				url: `http://ya.ru`,
+				id:  `HGHQZJH6`,
+			},
 			want: want{
 				statusCode: http.StatusTemporaryRedirect,
 				body:       ``,
@@ -113,11 +125,14 @@ func Test_redirectHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       `Post request to "/{id}" returns a bad request`,
-			target:     "/HGHQZJH6",
-			method:     http.MethodPost,
-			body:       strings.NewReader(``),
-			existedURL: `http://ya.ru`,
+			name:   `Post request to "/{id}" returns a bad request`,
+			target: "/HGHQZJH6",
+			method: http.MethodPost,
+			body:   strings.NewReader(``),
+			existedURL: existedURL{
+				url: `http://ya.ru`,
+				id:  `HGHQZJH6`,
+			},
 			want: want{
 				statusCode: http.StatusBadRequest,
 				body:       `Bad request`,
@@ -128,13 +143,10 @@ func Test_redirectHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			postReq := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.existedURL))
-			postReq.Header.Set("Content-Type", "text/plain")
-			postRec := httptest.NewRecorder()
-			rootHandler(postRec, postReq)
-
+			repo := repository.NewInMemoryRepositoryURL()
+			repo.Add(tt.existedURL.url, tt.existedURL.id)
 			mux := http.NewServeMux()
-			mux.HandleFunc("/{id}", redirectHandler)
+			mux.HandleFunc("/{id}", handler.RedirectHandler(repo))
 
 			req := httptest.NewRequest(tt.method, tt.target, tt.body)
 			rec := httptest.NewRecorder()
