@@ -128,10 +128,10 @@ func Test_redirectHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			post_req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.existedURL))
-			post_req.Header.Set("Content-Type", "text/plain")
-			post_rec := httptest.NewRecorder()
-			rootHandler(post_rec, post_req)
+			postReq := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.existedURL))
+			postReq.Header.Set("Content-Type", "text/plain")
+			postRec := httptest.NewRecorder()
+			rootHandler(postRec, postReq)
 
 			mux := http.NewServeMux()
 			mux.HandleFunc("/{id}", redirectHandler)
