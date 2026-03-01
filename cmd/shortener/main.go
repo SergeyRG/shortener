@@ -101,6 +101,7 @@ func redirectHandler(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 	id := req.PathValue("id")
+	fmt.Printf("url: %s id: %s\n", storage[id], id)
 
 	url, ok := storage[id]
 	if !ok {
