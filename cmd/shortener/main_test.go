@@ -1,7 +1,7 @@
 package main
 
 import (
-	"io"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -9,11 +9,18 @@ import (
 
 	"github.com/SergeyRG/shortener/internal/handler"
 	"github.com/SergeyRG/shortener/internal/repository"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_rootHandler(t *testing.T) {
+	repo := repository.NewInMemoryRepositoryURL()
+	h := http.HandlerFunc(handler.RootHandler(repo))
+	srv := httptest.NewServer(h)
+
+	defer srv.Close()
+
 	type want struct {
 		statusCode  int
 		contentType string
@@ -23,7 +30,7 @@ func Test_rootHandler(t *testing.T) {
 		name        string
 		target      string
 		method      string
-		body        io.Reader
+		body        string
 		contentType string
 		want        want
 	}{
@@ -31,7 +38,7 @@ func Test_rootHandler(t *testing.T) {
 			name:        `Post request to "/" returns a short link`,
 			target:      "/",
 			method:      http.MethodPost,
-			body:        strings.NewReader(`http://ya.ru`),
+			body:        `http://ya.ru`,
 			contentType: `text/plain`,
 			want: want{
 				statusCode:  http.StatusCreated,
@@ -43,7 +50,7 @@ func Test_rootHandler(t *testing.T) {
 			name:        `GET request to "/" returns a bad request`,
 			target:      "/",
 			method:      http.MethodGet,
-			body:        strings.NewReader(``),
+			body:        ``,
 			contentType: `text/plain`,
 			want: want{
 				statusCode:  http.StatusBadRequest,
@@ -55,7 +62,7 @@ func Test_rootHandler(t *testing.T) {
 			name:        `POST request for urls other than "/" and "/{id}" returns a bad request`,
 			target:      "/test/test",
 			method:      http.MethodPost,
-			body:        strings.NewReader(`ya.ru`),
+			body:        `ya.ru`,
 			contentType: `text/plain`,
 			want: want{
 				statusCode:  http.StatusBadRequest,
@@ -67,57 +74,53 @@ func Test_rootHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo := repository.NewInMemoryRepositoryURL()
-			mux := http.NewServeMux()
-			mux.HandleFunc("/", handler.RootHandler(repo))
 
-			req := httptest.NewRequest(tt.method, tt.target, tt.body)
-			req.Header.Set("Content-Type", "text/plain")
-			rec := httptest.NewRecorder()
-			mux.ServeHTTP(rec, req)
+			req := resty.New().SetBaseURL(srv.URL).R()
+			resp, err := req.SetHeader("Content-Type", tt.contentType).
+				SetBody(tt.body).
+				Execute(tt.method, tt.target)
 
-			result := rec.Result()
+			assert.NoError(t, err, "error making HTTP request")
 
-			assert.Equal(t, tt.want.statusCode, result.StatusCode)
-			assert.Contains(t, result.Header.Get("Content-Type"), tt.want.contentType)
+			assert.Equal(t, tt.want.statusCode, resp.StatusCode())
+			assert.Contains(t, resp.Header().Get("Content-Type"), tt.want.contentType)
 
-			urlResult, err := io.ReadAll(result.Body)
-			require.NoError(t, err)
-			err = result.Body.Close()
-			require.NoError(t, err)
-
-			assert.Equal(t, tt.want.body, strings.TrimSpace(string(urlResult)))
+			assert.Equal(t, tt.want.body, strings.TrimSpace(string(resp.Body())))
 		})
 	}
 }
 
 func Test_redirectHandler(t *testing.T) {
-	type existedURL struct {
-		url string
-		id  string
-	}
+	repo := repository.NewInMemoryRepositoryURL()
+	repo.Add("http://ya.ru", "HGHQZJH6")
+
+	h := handler.RedirectHandler(repo)
+	r := chi.NewRouter()
+	r.Route("/{id}", func(r chi.Router) {
+		r.Get("/", h)
+		r.Post("/", h)
+	})
+
+	srv := httptest.NewServer(r)
+	defer srv.Close()
+
 	type want struct {
 		statusCode int
 		body       string
 		location   string
 	}
 	tests := []struct {
-		name       string
-		target     string
-		method     string
-		body       io.Reader
-		existedURL existedURL
-		want       want
+		name   string
+		target string
+		method string
+		body   string
+		want   want
 	}{
 		{
 			name:   `Get request to "/{id}" returns a redirection`,
 			target: "/HGHQZJH6",
 			method: http.MethodGet,
-			body:   strings.NewReader(``),
-			existedURL: existedURL{
-				url: `http://ya.ru`,
-				id:  `HGHQZJH6`,
-			},
+			body:   ``,
 			want: want{
 				statusCode: http.StatusTemporaryRedirect,
 				body:       ``,
@@ -128,11 +131,7 @@ func Test_redirectHandler(t *testing.T) {
 			name:   `Post request to "/{id}" returns a bad request`,
 			target: "/HGHQZJH6",
 			method: http.MethodPost,
-			body:   strings.NewReader(``),
-			existedURL: existedURL{
-				url: `http://ya.ru`,
-				id:  `HGHQZJH6`,
-			},
+			body:   ``,
 			want: want{
 				statusCode: http.StatusBadRequest,
 				body:       `Bad request`,
@@ -143,28 +142,24 @@ func Test_redirectHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo := repository.NewInMemoryRepositoryURL()
-			repo.Add(tt.existedURL.url, tt.existedURL.id)
-			mux := http.NewServeMux()
-			mux.HandleFunc("/{id}", handler.RedirectHandler(repo))
 
-			req := httptest.NewRequest(tt.method, tt.target, tt.body)
-			rec := httptest.NewRecorder()
-			mux.ServeHTTP(rec, req)
+			req := resty.New().SetBaseURL(srv.URL).
+				SetRedirectPolicy(resty.NoRedirectPolicy()).
+				R()
 
-			result := rec.Result()
+			resp, err := req.SetBody(tt.body).
+				Execute(tt.method, tt.target)
 
-			assert.Equal(t, tt.want.statusCode, result.StatusCode)
+			if err != nil && !errors.Is(err, resty.ErrAutoRedirectDisabled) {
+				t.Fatalf("error making HTTP request")
+			}
 
-			urlResult, err := io.ReadAll(result.Body)
-			require.NoError(t, err)
-			err = result.Body.Close()
-			require.NoError(t, err)
+			assert.Equal(t, tt.want.statusCode, resp.StatusCode())
 
-			assert.Equal(t, tt.want.body, strings.TrimSpace(string(urlResult)))
+			assert.Equal(t, tt.want.body, strings.TrimSpace(string(resp.Body())))
 
 			if tt.want.location != "" {
-				assert.Equal(t, result.Header.Get("location"), tt.want.location)
+				assert.Equal(t, resp.Header().Get("location"), tt.want.location)
 			}
 		})
 	}

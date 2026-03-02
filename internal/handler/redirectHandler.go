@@ -19,8 +19,8 @@ func RedirectHandler(repo repository.RepositoryURL) func(rw http.ResponseWriter,
 			http.Error(rw, "Bad request", http.StatusBadRequest)
 			return
 		}
-		id := req.PathValue("id")
 
+		id := req.PathValue("id")
 		url, ok := repo.GetByID(id)
 		fmt.Printf("url: %s id: %s\n", url, id)
 		if !ok {

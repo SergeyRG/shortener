@@ -1,11 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/SergeyRG/shortener/internal/handler"
 	"github.com/SergeyRG/shortener/internal/repository"
+	"github.com/go-chi/chi/v5"
 )
 
 func main() {
@@ -16,9 +16,18 @@ func main() {
 }
 
 func run(repo repository.RepositoryURL) error {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", handler.RootHandler(repo))
-	mux.HandleFunc("/{id}", handler.RedirectHandler(repo))
-	fmt.Println("Сервер запущен на :8080")
-	return http.ListenAndServe(`:8080`, mux)
+	// mux := http.NewServeMux()
+	// mux.HandleFunc("/", handler.RootHandler(repo))
+	// mux.HandleFunc("/{id}", handler.RedirectHandler(repo))
+	// fmt.Println("Сервер запущен на :8080")
+	r := chi.NewRouter()
+	r.Route("/", func(r chi.Router) {
+		r.Get("/", handler.RootHandler(repo))
+		r.Post("/", handler.RootHandler(repo))
+		r.Route("/{id}", func(r chi.Router) {
+			r.Get("/", handler.RedirectHandler(repo))
+			r.Post("/", handler.RedirectHandler(repo))
+		})
+	})
+	return http.ListenAndServe(`:8080`, r)
 }
