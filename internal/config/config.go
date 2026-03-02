@@ -84,16 +84,16 @@ func NewConfig() Config {
 		host: "",
 		port: "8080",
 	}
-	BaseShortUrlAddress := urlAddress{
+	BaseShortURLAddress := urlAddress{
 		scheme: "http",
 		host:   "localhost:8080",
 	}
 
-	parseFlags(&ServerAddress, &BaseShortUrlAddress)
+	parseFlags(&ServerAddress, &BaseShortURLAddress)
 
 	return Config{
 		ServerAddress:       ServerAddress.String(),
-		BaseShortURLAddress: BaseShortUrlAddress.String(),
+		BaseShortURLAddress: BaseShortURLAddress.String(),
 	}
 }
 
