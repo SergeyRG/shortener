@@ -46,7 +46,7 @@ func RootHandler(repo repository.RepositoryURL, cfg config.Config) func(rw http.
 		rw.Header().Set("content-type", "text/plain")
 		rw.WriteHeader(http.StatusCreated)
 
-		rw.Write([]byte(cfg.BaseShortUrlAddress + `/` + urlID))
+		rw.Write([]byte(cfg.BaseShortURLAddress + `/` + urlID))
 
 	}
 }

@@ -19,7 +19,7 @@ func Test_rootHandler(t *testing.T) {
 	repo := repository.NewInMemoryRepositoryURL()
 	cfg := config.Config{
 		ServerAddress:       ":8080",
-		BaseShortUrlAddress: "http://localhost:8080",
+		BaseShortURLAddress: "http://localhost:8080",
 	}
 	h := http.HandlerFunc(handler.RootHandler(repo, cfg))
 	srv := httptest.NewServer(h)

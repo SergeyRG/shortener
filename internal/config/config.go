@@ -24,12 +24,12 @@ func (na *netAddress) String() string {
 func (na *netAddress) Set(flagValue string) error {
 	host, port, err := net.SplitHostPort(flagValue)
 	if err != nil {
-		return fmt.Errorf("Flag a value must be in form host:port")
+		return fmt.Errorf("flag a value must be in form host:port")
 	}
 
 	p, err := strconv.Atoi(port)
 	if err != nil || p < 1 || p > 65535 {
-		return fmt.Errorf("Incorrect port")
+		return fmt.Errorf("incorrect port")
 	}
 
 	na.host = host
@@ -49,24 +49,24 @@ func (ua *urlAddress) String() string {
 func (ua *urlAddress) Set(flagValue string) error {
 	uParsed, err := url.ParseRequestURI(flagValue)
 	if err != nil {
-		return fmt.Errorf("Flag a value must be in form http[s]://host:port")
+		return fmt.Errorf("flag a value must be in form http[s]://host:port")
 	}
 
 	if uParsed.Scheme != "http" && uParsed.Scheme != "https" {
-		return fmt.Errorf("Flag a value must be in form http[s]://host:port")
+		return fmt.Errorf("flag a value must be in form http[s]://host:port")
 	}
 
 	if uParsed.User != nil {
-		return fmt.Errorf("Flag a value must be in form http[s]://host:port")
+		return fmt.Errorf("flag a value must be in form http[s]://host:port")
 	}
 
 	if uParsed.Path != "" {
-		return fmt.Errorf("Flag a value must be in form http[s]://host:port")
+		return fmt.Errorf("flag a value must be in form http[s]://host:port")
 	}
 
 	p, err := strconv.Atoi(uParsed.Port())
 	if err != nil || p < 1 || p > 65535 {
-		return fmt.Errorf("Incorrect port")
+		return fmt.Errorf("incorrect port")
 	}
 
 	ua.scheme = uParsed.Scheme
@@ -76,7 +76,7 @@ func (ua *urlAddress) Set(flagValue string) error {
 
 type Config struct {
 	ServerAddress       string
-	BaseShortUrlAddress string
+	BaseShortURLAddress string
 }
 
 func NewConfig() Config {
@@ -93,7 +93,7 @@ func NewConfig() Config {
 
 	return Config{
 		ServerAddress:       ServerAddress.String(),
-		BaseShortUrlAddress: BaseShortUrlAddress.String(),
+		BaseShortURLAddress: BaseShortUrlAddress.String(),
 	}
 }
 
