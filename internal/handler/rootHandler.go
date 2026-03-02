@@ -6,11 +6,12 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/SergeyRG/shortener/internal/config"
 	"github.com/SergeyRG/shortener/internal/repository"
 	"github.com/SergeyRG/shortener/internal/service"
 )
 
-func RootHandler(repo repository.RepositoryURL) func(rw http.ResponseWriter, req *http.Request) {
+func RootHandler(repo repository.RepositoryURL, cfg config.Config) func(rw http.ResponseWriter, req *http.Request) {
 	return func(rw http.ResponseWriter, req *http.Request) {
 
 		fmt.Printf("Content-type: %s\n", req.Header.Get("content-type"))
@@ -45,7 +46,7 @@ func RootHandler(repo repository.RepositoryURL) func(rw http.ResponseWriter, req
 		rw.Header().Set("content-type", "text/plain")
 		rw.WriteHeader(http.StatusCreated)
 
-		rw.Write([]byte("http://localhost:8080/" + urlID))
+		rw.Write([]byte(cfg.BaseShortUrlAddress + `/` + urlID))
 
 	}
 }

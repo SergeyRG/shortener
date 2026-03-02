@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/SergeyRG/shortener/internal/config"
 	"github.com/SergeyRG/shortener/internal/handler"
 	"github.com/SergeyRG/shortener/internal/repository"
 	"github.com/go-chi/chi/v5"
@@ -16,7 +17,11 @@ import (
 
 func Test_rootHandler(t *testing.T) {
 	repo := repository.NewInMemoryRepositoryURL()
-	h := http.HandlerFunc(handler.RootHandler(repo))
+	cfg := config.Config{
+		ServerAddress:       ":8080",
+		BaseShortUrlAddress: "http://localhost:8080",
+	}
+	h := http.HandlerFunc(handler.RootHandler(repo, cfg))
 	srv := httptest.NewServer(h)
 
 	defer srv.Close()

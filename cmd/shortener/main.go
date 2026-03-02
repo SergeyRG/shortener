@@ -3,31 +3,32 @@ package main
 import (
 	"net/http"
 
+	"github.com/SergeyRG/shortener/internal/config"
 	"github.com/SergeyRG/shortener/internal/handler"
 	"github.com/SergeyRG/shortener/internal/repository"
 	"github.com/go-chi/chi/v5"
 )
 
 func main() {
+	cfg := config.NewConfig()
 	repo := repository.NewInMemoryRepositoryURL()
-	if err := run(repo); err != nil {
+	if err := run(repo, cfg); err != nil {
 		panic(err)
 	}
 }
 
-func run(repo repository.RepositoryURL) error {
-	// mux := http.NewServeMux()
-	// mux.HandleFunc("/", handler.RootHandler(repo))
-	// mux.HandleFunc("/{id}", handler.RedirectHandler(repo))
-	// fmt.Println("Сервер запущен на :8080")
+func run(repo repository.RepositoryURL, cfg config.Config) error {
+	rootHandler := handler.RootHandler(repo, cfg)
+	redirectHandler := handler.RedirectHandler(repo)
+
 	r := chi.NewRouter()
 	r.Route("/", func(r chi.Router) {
-		r.Get("/", handler.RootHandler(repo))
-		r.Post("/", handler.RootHandler(repo))
+		r.Get("/", rootHandler)
+		r.Post("/", rootHandler)
 		r.Route("/{id}", func(r chi.Router) {
-			r.Get("/", handler.RedirectHandler(repo))
-			r.Post("/", handler.RedirectHandler(repo))
+			r.Get("/", redirectHandler)
+			r.Post("/", redirectHandler)
 		})
 	})
-	return http.ListenAndServe(`:8080`, r)
+	return http.ListenAndServe(cfg.ServerAddress, r)
 }
