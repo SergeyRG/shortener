@@ -1,33 +1,34 @@
 package main
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/SergeyRG/shortener/internal/config"
 	"github.com/SergeyRG/shortener/internal/handler"
 	"github.com/SergeyRG/shortener/internal/repository"
+	"github.com/SergeyRG/shortener/internal/service"
 	"github.com/go-chi/chi/v5"
 )
 
 func main() {
 	cfg := config.NewConfig()
 	repo := repository.NewInMemoryRepositoryURL()
-	if err := run(repo, cfg); err != nil {
-		panic(err)
+	svc := service.NewURLService(repo, cfg)
+	if err := run(svc, cfg); err != nil {
+		log.Fatalf("Ошибка запуска приложения: %v", err)
 	}
 }
 
-func run(repo repository.RepositoryURL, cfg config.Config) error {
-	rootHandler := handler.RootHandler(repo, cfg)
-	redirectHandler := handler.RedirectHandler(repo)
+func run(svc service.URLServiceInterface, cfg config.Config) error {
+	rootHandler := handler.RootHandler(svc)
+	redirectHandler := handler.RedirectHandler(svc)
 
 	r := chi.NewRouter()
 	r.Route("/", func(r chi.Router) {
-		r.Get("/", rootHandler)
 		r.Post("/", rootHandler)
 		r.Route("/{id}", func(r chi.Router) {
 			r.Get("/", redirectHandler)
-			r.Post("/", redirectHandler)
 		})
 	})
 	return http.ListenAndServe(cfg.ServerAddress, r)

@@ -8,6 +8,16 @@ import (
 	"strconv"
 )
 
+func validatePortString(port string) error {
+
+	p, err := strconv.Atoi(port)
+	if err != nil || p < 1 || p > 65535 {
+		return fmt.Errorf("incorrect port")
+	}
+	return nil
+
+}
+
 type netAddress struct {
 	host string
 	port string
@@ -24,12 +34,12 @@ func (na *netAddress) String() string {
 func (na *netAddress) Set(flagValue string) error {
 	host, port, err := net.SplitHostPort(flagValue)
 	if err != nil {
-		return fmt.Errorf("flag a value must be in form host:port")
+		return fmt.Errorf("flag -a value must be in form host:port, "+
+			"received: %s", flagValue)
 	}
 
-	p, err := strconv.Atoi(port)
-	if err != nil || p < 1 || p > 65535 {
-		return fmt.Errorf("incorrect port")
+	if err := validatePortString(port); err != nil {
+		return err
 	}
 
 	na.host = host
@@ -49,24 +59,27 @@ func (ua *urlAddress) String() string {
 func (ua *urlAddress) Set(flagValue string) error {
 	uParsed, err := url.ParseRequestURI(flagValue)
 	if err != nil {
-		return fmt.Errorf("flag a value must be in form http[s]://host:port")
+		return fmt.Errorf("flag -b value must be in form http[s]://host:port, "+
+			"received: %s", flagValue)
 	}
 
 	if uParsed.Scheme != "http" && uParsed.Scheme != "https" {
-		return fmt.Errorf("flag a value must be in form http[s]://host:port")
+		return fmt.Errorf("flag -b value must be in form http[s]://host:port, "+
+			"received: %s", flagValue)
 	}
 
 	if uParsed.User != nil {
-		return fmt.Errorf("flag a value must be in form http[s]://host:port")
+		return fmt.Errorf("flag -b value must be in form http[s]://host:port, "+
+			"received: %s", flagValue)
 	}
 
 	if uParsed.Path != "" {
-		return fmt.Errorf("flag a value must be in form http[s]://host:port")
+		return fmt.Errorf("flag -b value must be in form http[s]://host:port, "+
+			"received: %s", flagValue)
 	}
 
-	p, err := strconv.Atoi(uParsed.Port())
-	if err != nil || p < 1 || p > 65535 {
-		return fmt.Errorf("incorrect port")
+	if err := validatePortString(uParsed.Port()); err != nil {
+		return err
 	}
 
 	ua.scheme = uParsed.Scheme

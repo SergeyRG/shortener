@@ -10,6 +10,8 @@ import (
 	"github.com/SergeyRG/shortener/internal/config"
 	"github.com/SergeyRG/shortener/internal/handler"
 	"github.com/SergeyRG/shortener/internal/repository"
+	"github.com/SergeyRG/shortener/internal/service"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
@@ -21,7 +23,8 @@ func Test_rootHandler(t *testing.T) {
 		ServerAddress:       ":8080",
 		BaseShortURLAddress: "http://localhost:8080",
 	}
-	h := http.HandlerFunc(handler.RootHandler(repo, cfg))
+	svc := service.NewURLService(repo, cfg)
+	h := http.HandlerFunc(handler.RootHandler(svc))
 	srv := httptest.NewServer(h)
 
 	defer srv.Close()
@@ -51,30 +54,6 @@ func Test_rootHandler(t *testing.T) {
 				body:        `http://localhost:8080/HGHQZJH6`,
 			},
 		},
-		{
-			name:        `GET request to "/" returns a bad request`,
-			target:      "/",
-			method:      http.MethodGet,
-			body:        ``,
-			contentType: `text/plain`,
-			want: want{
-				statusCode:  http.StatusBadRequest,
-				contentType: `text/plain`,
-				body:        `Only POST is allowed`,
-			},
-		},
-		{
-			name:        `POST request for urls other than "/" and "/{id}" returns a bad request`,
-			target:      "/test/test",
-			method:      http.MethodPost,
-			body:        `ya.ru`,
-			contentType: `text/plain`,
-			want: want{
-				statusCode:  http.StatusBadRequest,
-				contentType: `text/plain`,
-				body:        `URL is not allowed`,
-			},
-		},
 	}
 
 	for _, tt := range tests {
@@ -98,12 +77,16 @@ func Test_rootHandler(t *testing.T) {
 func Test_redirectHandler(t *testing.T) {
 	repo := repository.NewInMemoryRepositoryURL()
 	repo.Add("http://ya.ru", "HGHQZJH6")
+	cfg := config.Config{
+		ServerAddress:       ":8080",
+		BaseShortURLAddress: "http://localhost:8080",
+	}
 
-	h := handler.RedirectHandler(repo)
+	svc := service.NewURLService(repo, cfg)
+	h := handler.RedirectHandler(svc)
 	r := chi.NewRouter()
 	r.Route("/{id}", func(r chi.Router) {
 		r.Get("/", h)
-		r.Post("/", h)
 	})
 
 	srv := httptest.NewServer(r)
@@ -130,17 +113,6 @@ func Test_redirectHandler(t *testing.T) {
 				statusCode: http.StatusTemporaryRedirect,
 				body:       ``,
 				location:   `http://ya.ru`,
-			},
-		},
-		{
-			name:   `Post request to "/{id}" returns a bad request`,
-			target: "/HGHQZJH6",
-			method: http.MethodPost,
-			body:   ``,
-			want: want{
-				statusCode: http.StatusBadRequest,
-				body:       `Bad request`,
-				location:   ``,
 			},
 		},
 	}
