@@ -59,7 +59,7 @@ func (u *URLService) AddShortURL(url string) (string, error) {
 }
 
 func calculateShortURLID(url string) string {
-	var hash [32]byte = sha256.Sum256([]byte(url))
+	var hash = sha256.Sum256([]byte(url))
 	return string([]byte(base32.StdEncoding.EncodeToString(hash[:]))[:8])
 
 }
