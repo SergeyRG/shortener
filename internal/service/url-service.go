@@ -38,6 +38,7 @@ func (u *URLService) MakeShortURLByID(id string) string {
 func (u *URLService) AddShortURL(url string) (string, error) {
 	var addition = ""
 	var id = ""
+	var iter = 0
 	for {
 		id = calculateShortURLID(url + addition)
 		err := u.repo.Add(url, id)
@@ -55,6 +56,11 @@ func (u *URLService) AddShortURL(url string) (string, error) {
 		}
 
 		addition += "1"
+		iter += 1
+
+		if iter == 11 {
+			return "", errors.New("cant create a short link. Not enough available IDs")
+		}
 	}
 }
 
