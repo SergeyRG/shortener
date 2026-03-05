@@ -16,7 +16,7 @@ func NewInMemoryRepositoryURL() *InMemoryRepositoryURL {
 
 func (r *InMemoryRepositoryURL) Add(url string, id string) error {
 	if _, ok := r.stor[id]; ok {
-		return urlErrors.AlredyExistError
+		return urlErrors.ErrAlredyExist
 	}
 	r.stor[id] = url
 	return nil
@@ -26,7 +26,7 @@ func (r *InMemoryRepositoryURL) GetByID(id string) (string, error) {
 	if v, ok := r.stor[id]; ok {
 		return v, nil
 	} else {
-		return "", urlErrors.URLNotFoundError
+		return "", urlErrors.ErrURLNotFound
 	}
 
 }

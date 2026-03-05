@@ -46,8 +46,8 @@ func (u *URLService) AddShortURL(url string) (string, error) {
 			return id, nil
 		}
 
-		if err != urlErrors.AlredyExistError {
-			return "", errors.New("Unexpected error")
+		if err != urlErrors.ErrAlredyExist {
+			return "", errors.New("unexpected error")
 		}
 
 		if v, _ := u.repo.GetByID(id); v == url {
@@ -59,9 +59,7 @@ func (u *URLService) AddShortURL(url string) (string, error) {
 }
 
 func calculateShortURLID(url string) string {
-	var hash [32]byte
-
-	hash = sha256.Sum256([]byte(url))
+	var hash [32]byte = sha256.Sum256([]byte(url))
 	return string([]byte(base32.StdEncoding.EncodeToString(hash[:]))[:8])
 
 }
