@@ -14,7 +14,7 @@ import (
 func main() {
 	cfg := config.NewConfig()
 	repo := repository.NewInMemoryRepositoryURL()
-	g := service.UrlGenerator{}
+	g := service.URLGenerator{}
 	svc := service.NewURLService(repo, cfg, g)
 	if err := run(svc, cfg); err != nil {
 		log.Fatalf("Ошибка запуска приложения: %v", err)

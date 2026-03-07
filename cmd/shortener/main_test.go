@@ -23,7 +23,7 @@ func Test_rootHandler(t *testing.T) {
 		ServerAddress:       ":8080",
 		BaseShortURLAddress: "http://localhost:8080",
 	}
-	g := service.UrlGenerator{}
+	g := service.URLGenerator{}
 	svc := service.NewURLService(repo, cfg, g)
 	h := http.HandlerFunc(handler.RootHandler(svc))
 	srv := httptest.NewServer(h)
@@ -82,7 +82,7 @@ func Test_redirectHandler(t *testing.T) {
 		ServerAddress:       ":8080",
 		BaseShortURLAddress: "http://localhost:8080",
 	}
-	g := service.UrlGenerator{}
+	g := service.URLGenerator{}
 	svc := service.NewURLService(repo, cfg, g)
 	h := handler.RedirectHandler(svc)
 	r := chi.NewRouter()
