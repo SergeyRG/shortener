@@ -40,12 +40,12 @@ func RootHandler(svc service.URLServiceInterface) func(rw http.ResponseWriter, r
 		rw.Header().Set("content-type", "text/plain")
 		rw.WriteHeader(http.StatusCreated)
 
-		shortUrl, err := svc.MakeShortURLByID(id)
+		shortURL, err := svc.MakeShortURLByID(id)
 		if err != nil {
 			http.Error(rw, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		rw.Write([]byte(shortUrl))
+		rw.Write([]byte(shortURL))
 
 	}
 }

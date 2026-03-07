@@ -12,10 +12,10 @@ import (
 type URLService struct {
 	repo        URLRepository
 	cfg         config.Config
-	idGenerator ShortUrlIDGenerator
+	idGenerator ShortURLIDGenerator
 }
 
-func NewURLService(r URLRepository, cfg config.Config, idGenerator ShortUrlIDGenerator) *URLService {
+func NewURLService(r URLRepository, cfg config.Config, idGenerator ShortURLIDGenerator) *URLService {
 	return &URLService{
 		repo:        r,
 		cfg:         cfg,
@@ -68,9 +68,9 @@ func (u *URLService) AddShortURL(url string) (string, error) {
 	}
 }
 
-type UrlGenerator struct{}
+type URLGenerator struct{}
 
-func (ug UrlGenerator) CalculateShortURLID(url string) string {
+func (ug URLGenerator) CalculateShortURLID(url string) string {
 	var hash = sha256.Sum256([]byte(url))
 	return string([]byte(base32.StdEncoding.EncodeToString(hash[:]))[:8])
 

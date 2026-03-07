@@ -47,7 +47,7 @@ func TestURLService_GetOriginalURLByID(t *testing.T) {
 
 			m := mocks.NewMockURLRepository(ctrl)
 			m.EXPECT().GetByID(tt.id).Times(1).Return(tt.want, tt.wantErr)
-			g := service.UrlGenerator{}
+			g := service.URLGenerator{}
 			us := service.NewURLService(m, tt.cfg, g)
 
 			got, gotErr := us.GetOriginalURLByID(tt.id)
@@ -97,7 +97,7 @@ func TestURLService_MakeShortURLByID(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := mocks.NewMockURLRepository(ctrl)
-			g := service.UrlGenerator{}
+			g := service.URLGenerator{}
 			us := service.NewURLService(m, tt.cfg, g)
 
 			got, gotErr := us.MakeShortURLByID(tt.id)
