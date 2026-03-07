@@ -3,7 +3,6 @@ package service
 import (
 	"crypto/sha256"
 	"encoding/base32"
-	"errors"
 	"net/url"
 
 	"github.com/SergeyRG/shortener/internal/config"
@@ -11,14 +10,16 @@ import (
 )
 
 type URLService struct {
-	repo RepositoryURL
-	cfg  config.Config
+	repo        URLRepository
+	cfg         config.Config
+	idGenerator ShortUrlIDGenerator
 }
 
-func NewURLService(r RepositoryURL, cfg config.Config) *URLService {
+func NewURLService(r URLRepository, cfg config.Config, idGenerator ShortUrlIDGenerator) *URLService {
 	return &URLService{
-		repo: r,
-		cfg:  cfg,
+		repo:        r,
+		cfg:         cfg,
+		idGenerator: idGenerator,
 	}
 }
 
@@ -30,17 +31,20 @@ func (u *URLService) GetOriginalURLByID(id string) (string, error) {
 	}
 }
 
-func (u *URLService) MakeShortURLByID(id string) string {
-	res, _ := url.JoinPath(u.cfg.BaseShortURLAddress, id)
-	return res
+func (u *URLService) MakeShortURLByID(id string) (string, error) {
+	res, err := url.JoinPath(u.cfg.BaseShortURLAddress, id)
+	if err != nil {
+		return "", err
+	}
+	return res, nil
 }
 
 func (u *URLService) AddShortURL(url string) (string, error) {
 	var addition = ""
 	var id = ""
-	var iter = 0
+	var iter = 1
 	for {
-		id = calculateShortURLID(url + addition)
+		id = u.idGenerator.CalculateShortURLID(url + addition)
 		err := u.repo.Add(url, id)
 
 		if err == nil {
@@ -48,7 +52,7 @@ func (u *URLService) AddShortURL(url string) (string, error) {
 		}
 
 		if err != urlErrors.ErrAlredyExist {
-			return "", errors.New("unexpected error")
+			return "", urlErrors.ErrUnexpected
 		}
 
 		if v, _ := u.repo.GetByID(id); v == url {
@@ -59,12 +63,14 @@ func (u *URLService) AddShortURL(url string) (string, error) {
 		iter += 1
 
 		if iter == 11 {
-			return "", errors.New("cant create a short link. Not enough available IDs")
+			return "", urlErrors.ErrNotEnoughID
 		}
 	}
 }
 
-func calculateShortURLID(url string) string {
+type UrlGenerator struct{}
+
+func (ug UrlGenerator) CalculateShortURLID(url string) string {
 	var hash = sha256.Sum256([]byte(url))
 	return string([]byte(base32.StdEncoding.EncodeToString(hash[:]))[:8])
 

@@ -21,10 +21,6 @@ func RootHandler(svc service.URLServiceInterface) func(rw http.ResponseWriter, r
 			http.Error(rw, "Bad request", http.StatusBadRequest)
 			return
 		}
-		if req.URL.Path != "/" {
-			http.Error(rw, "URL is not allowed", http.StatusBadRequest)
-			return
-		}
 
 		body, err := io.ReadAll(req.Body)
 		if err != nil {
@@ -44,7 +40,12 @@ func RootHandler(svc service.URLServiceInterface) func(rw http.ResponseWriter, r
 		rw.Header().Set("content-type", "text/plain")
 		rw.WriteHeader(http.StatusCreated)
 
-		rw.Write([]byte(svc.MakeShortURLByID(id)))
+		shortUrl, err := svc.MakeShortURLByID(id)
+		if err != nil {
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		rw.Write([]byte(shortUrl))
 
 	}
 }

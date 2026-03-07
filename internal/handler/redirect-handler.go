@@ -16,7 +16,7 @@ func RedirectHandler(svc service.URLServiceInterface) func(rw http.ResponseWrite
 
 		id := req.PathValue("id")
 		url, err := svc.GetOriginalURLByID(id)
-		log.Printf("url: %s id: %s\n", url, id)
+		log.Printf("url: %s id: %s\n\n", url, id)
 		if err != nil {
 			http.Error(rw, err.Error(), http.StatusBadRequest)
 			return
