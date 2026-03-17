@@ -1,10 +1,12 @@
 package config
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"net"
 	"net/url"
+	"os"
 	"strconv"
 )
 
@@ -18,72 +20,67 @@ func validatePortString(port string) error {
 
 }
 
-type netAddress struct {
-	host string
-	port string
-}
+//type netAddress struct {
+//	host string
+//	port string
+//}
 
-func (na *netAddress) String() string {
-	result := na.host
-	if na.port != "" {
-		result = result + ":" + na.port
-	}
-	return result
-}
+// func (na *netAddress) String() string {
+// 	result := na.host
+// 	if na.port != "" {
+// 		result = result + ":" + na.port
+// 	}
+// 	return result
+// }
 
-func (na *netAddress) Set(flagValue string) error {
-	host, port, err := net.SplitHostPort(flagValue)
+func validateServerAddress(val string) error {
+	_, port, err := net.SplitHostPort(val)
 	if err != nil {
 		return fmt.Errorf("flag -a value must be in form host:port, "+
-			"received: %s", flagValue)
+			"received: %s", val)
 	}
 
 	if err := validatePortString(port); err != nil {
-		return err
+		return errors.New("port value is specified outside the acceptable range")
 	}
-
-	na.host = host
-	na.port = port
 	return nil
 }
 
-type urlAddress struct {
-	scheme string
-	host   string
-}
+// type urlAddress struct {
+// 	scheme string
+// 	host   string
+// }
 
-func (ua *urlAddress) String() string {
-	return ua.scheme + `://` + ua.host
-}
+// func (ua *urlAddress) String() string {
+// 	return ua.scheme + `://` + ua.host
+// }
 
-func (ua *urlAddress) Set(flagValue string) error {
-	uParsed, err := url.ParseRequestURI(flagValue)
+func validateBaseURL(val string) error {
+	uParsed, err := url.ParseRequestURI(val)
 	if err != nil {
 		return fmt.Errorf("flag -b value must be in form http[s]://host:port, "+
-			"received: %s", flagValue)
+			"received: %s", val)
 	}
 
 	if uParsed.Scheme != "http" && uParsed.Scheme != "https" {
 		return fmt.Errorf("flag -b value must be in form http[s]://host:port, "+
-			"received: %s", flagValue)
+			"received: %s", val)
 	}
 
 	if uParsed.User != nil {
 		return fmt.Errorf("flag -b value must be in form http[s]://host:port, "+
-			"received: %s", flagValue)
+			"received: %s", val)
 	}
 
 	if uParsed.Path != "" {
 		return fmt.Errorf("flag -b value must be in form http[s]://host:port, "+
-			"received: %s", flagValue)
+			"received: %s", val)
 	}
 
 	if err := validatePortString(uParsed.Port()); err != nil {
 		return err
 	}
 
-	ua.scheme = uParsed.Scheme
-	ua.host = uParsed.Host
 	return nil
 }
 
@@ -92,27 +89,32 @@ type Config struct {
 	BaseShortURLAddress string
 }
 
-func NewConfig() Config {
-	ServerAddress := netAddress{
-		host: "",
-		port: "8080",
-	}
-	BaseShortURLAddress := urlAddress{
-		scheme: "http",
-		host:   "localhost:8080",
-	}
-
-	parseFlags(&ServerAddress, &BaseShortURLAddress)
-
-	return Config{
-		ServerAddress:       ServerAddress.String(),
-		BaseShortURLAddress: BaseShortURLAddress.String(),
-	}
-}
-
-func parseFlags(sa *netAddress, ua *urlAddress) {
-	flag.Var(sa, "a", "address and port to run server")
-	flag.Var(ua, "b", "base URL for short URLs")
+func NewConfig() (Config, error) {
+	ServerAddress := flag.String(
+		"a", ":8080", "address and port to run server")
+	BaseShortURLAddress := flag.String(
+		"b", "http://localhost:8080", "base URL for short URLs")
 
 	flag.Parse()
+
+	if val, exist := os.LookupEnv("SERVER_ADDRESS"); exist {
+		*ServerAddress = val
+	}
+	if val, exist := os.LookupEnv("BASE_URL"); exist {
+		*BaseShortURLAddress = val
+	}
+
+	if err := validateServerAddress(*ServerAddress); err != nil {
+		return Config{}, err
+	}
+
+	if err := validateBaseURL(*BaseShortURLAddress); err != nil {
+		return Config{}, err
+	}
+
+	return Config{
+			ServerAddress:       *ServerAddress,
+			BaseShortURLAddress: *BaseShortURLAddress,
+		},
+		nil
 }

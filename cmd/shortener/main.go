@@ -12,7 +12,10 @@ import (
 )
 
 func main() {
-	cfg := config.NewConfig()
+	cfg, err := config.NewConfig()
+	if err != nil {
+		log.Fatalf("Ошибка валидации конфигурации: %s", err)
+	}
 	repo := repository.NewInMemoryRepositoryURL()
 	g := service.URLGenerator{}
 	svc := service.NewURLService(repo, cfg, g)
