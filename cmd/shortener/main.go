@@ -36,13 +36,14 @@ func run() error {
 
 	rootHandler := logging.WithLogging(handler.RootHandler(svc))
 	redirectHandler := logging.WithLogging(handler.RedirectHandler(svc))
+	JsonShortenHandler := logging.WithLogging((handler.JsonShortenHandler(svc)))
 
 	r := chi.NewRouter()
 	r.Route("/", func(r chi.Router) {
 		r.Post("/", rootHandler)
-		r.Route("/{id}", func(r chi.Router) {
-			r.Get("/", redirectHandler)
-		})
+		r.Get("/{id}", redirectHandler)
+		r.Get("/{id}/", redirectHandler)
+		r.Post("/api/shorten", JsonShortenHandler)
 	})
 	logger.Info("запуск приложения")
 	return http.ListenAndServe(cfg.ServerAddress, r)

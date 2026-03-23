@@ -6,7 +6,7 @@ import (
 	"github.com/SergeyRG/shortener/internal/service"
 )
 
-func RedirectHandler(svc service.URLServiceInterface) func(rw http.ResponseWriter, req *http.Request) {
+func RedirectHandler(svc service.URLServiceInterface) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 
 		id := req.PathValue("id")
