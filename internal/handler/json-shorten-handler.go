@@ -10,14 +10,14 @@ import (
 )
 
 type request struct {
-	Url string `json:"url"`
+	URL string `json:"url"`
 }
 
 type response struct {
 	Result string `json:"result"`
 }
 
-func JsonShortenHandler(svc service.URLServiceInterface) http.HandlerFunc {
+func JSONShortenHandler(svc service.URLServiceInterface) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		decoder := json.NewDecoder(req.Body)
 		defer req.Body.Close()
@@ -32,7 +32,7 @@ func JsonShortenHandler(svc service.URLServiceInterface) http.HandlerFunc {
 		}
 		logging.Logger.Debug("json request is decoded")
 
-		ID, err := svc.AddShortURL(jr.Url)
+		ID, err := svc.AddShortURL(jr.URL)
 		if err != nil {
 			logging.Logger.Debug("cant add make short URL", zap.Error(err))
 			rw.WriteHeader(http.StatusBadRequest)
