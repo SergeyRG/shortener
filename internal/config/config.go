@@ -20,19 +20,6 @@ func validatePortString(port string) error {
 
 }
 
-//type netAddress struct {
-//	host string
-//	port string
-//}
-
-// func (na *netAddress) String() string {
-// 	result := na.host
-// 	if na.port != "" {
-// 		result = result + ":" + na.port
-// 	}
-// 	return result
-// }
-
 func validateServerAddress(val string) error {
 	_, port, err := net.SplitHostPort(val)
 	if err != nil {
@@ -45,15 +32,6 @@ func validateServerAddress(val string) error {
 	}
 	return nil
 }
-
-// type urlAddress struct {
-// 	scheme string
-// 	host   string
-// }
-
-// func (ua *urlAddress) String() string {
-// 	return ua.scheme + `://` + ua.host
-// }
 
 func validateBaseURL(val string) error {
 	uParsed, err := url.ParseRequestURI(val)

@@ -6,27 +6,36 @@ import (
 
 	"github.com/SergeyRG/shortener/internal/config"
 	"github.com/SergeyRG/shortener/internal/handler"
+	"github.com/SergeyRG/shortener/internal/logging"
 	"github.com/SergeyRG/shortener/internal/repository"
 	"github.com/SergeyRG/shortener/internal/service"
 	"github.com/go-chi/chi/v5"
 )
 
 func main() {
-	cfg, err := config.NewConfig()
-	if err != nil {
-		log.Fatalf("Ошибка валидации конфигурации: %s", err)
-	}
-	repo := repository.NewInMemoryRepositoryURL()
-	g := service.URLGenerator{}
-	svc := service.NewURLService(repo, cfg, g)
-	if err := run(svc, cfg); err != nil {
+	if err := run(); err != nil {
 		log.Fatalf("Ошибка запуска приложения: %v", err)
 	}
 }
 
-func run(svc service.URLServiceInterface, cfg config.Config) error {
-	rootHandler := handler.RootHandler(svc)
-	redirectHandler := handler.RedirectHandler(svc)
+func run() error {
+	cfg, err := config.NewConfig()
+	if err != nil {
+		log.Fatalf("Ошибка валидации конфигурации: %s", err)
+	}
+
+	if err := logging.Initialize("info"); err != nil {
+		log.Fatalf("Ошибка инициализации системы логирования: %s", err)
+	}
+	logger := logging.Logger
+	logger.Info("система логгирования инициализирована, начало инициализации приложения.")
+
+	repo := repository.NewInMemoryRepositoryURL()
+	g := service.URLGenerator{}
+	svc := service.NewURLService(repo, cfg, g)
+
+	rootHandler := logging.WithLogging(handler.RootHandler(svc))
+	redirectHandler := logging.WithLogging(handler.RedirectHandler(svc))
 
 	r := chi.NewRouter()
 	r.Route("/", func(r chi.Router) {
@@ -35,5 +44,6 @@ func run(svc service.URLServiceInterface, cfg config.Config) error {
 			r.Get("/", redirectHandler)
 		})
 	})
+	logger.Info("запуск приложения")
 	return http.ListenAndServe(cfg.ServerAddress, r)
 }

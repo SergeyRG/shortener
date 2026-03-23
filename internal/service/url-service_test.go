@@ -159,7 +159,7 @@ func TestURLService_AddShortURL(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mg := mocks.NewMockShortUrlIDGenerator(ctrl)
+			mg := mocks.NewMockShortURLIDGenerator(ctrl)
 			mr := mocks.NewMockURLRepository(ctrl)
 
 			mg.EXPECT().CalculateShortURLID(
