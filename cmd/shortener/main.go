@@ -7,6 +7,7 @@ import (
 	"github.com/SergeyRG/shortener/internal/config"
 	"github.com/SergeyRG/shortener/internal/handler"
 	"github.com/SergeyRG/shortener/internal/logging"
+	"github.com/SergeyRG/shortener/internal/middleware"
 	"github.com/SergeyRG/shortener/internal/repository"
 	"github.com/SergeyRG/shortener/internal/service"
 	"github.com/go-chi/chi/v5"
@@ -34,9 +35,9 @@ func run() error {
 	g := service.URLGenerator{}
 	svc := service.NewURLService(repo, cfg, g)
 
-	rootHandler := logging.WithLogging(handler.RootHandler(svc))
-	redirectHandler := logging.WithLogging(handler.RedirectHandler(svc))
-	JSONShortenHandler := logging.WithLogging((handler.JSONShortenHandler(svc)))
+	rootHandler := logging.WithLogging(middleware.GzipMiddleware(handler.RootHandler(svc)))
+	redirectHandler := logging.WithLogging(middleware.GzipMiddleware(handler.RedirectHandler(svc)))
+	JSONShortenHandler := logging.WithLogging(middleware.GzipMiddleware((handler.JSONShortenHandler(svc))))
 
 	r := chi.NewRouter()
 	r.Route("/", func(r chi.Router) {
