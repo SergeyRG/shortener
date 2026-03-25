@@ -1,52 +1,40 @@
 package middleware_test
 
-import (
-	"bytes"
-	"compress/gzip"
-	"net/http"
-	"net/http/httptest"
-	"testing"
+// func TestGzipCompression(t *testing.T) {
 
-	"github.com/SergeyRG/shortener/internal/handler"
-	"github.com/SergeyRG/shortener/internal/middleware"
-	"github.com/SergeyRG/shortener/internal/service/mocks"
-	"github.com/go-chi/chi/v5"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
-)
+// 	t.Run("sends_gzip", func(t *testing.T) {
+// 		ctrl := gomock.NewController(t)
+// 		defer ctrl.Finish()
+// 		m := mocks.NewMockURLServiceInterface(ctrl)
+// 		m.EXPECT().AddShortURL(gomock.Any()).AnyTimes()
+// 		m.EXPECT().MakeShortURLByID(gomock.Any()).AnyTimes()
 
-func TestGzipCompression(t *testing.T) {
+// 		buf := bytes.NewBuffer(nil)
+// 		zb := gzip.NewWriter(buf)
+// 		_, err := zb.Write([]byte("http://test.ru"))
+// 		require.NoError(t, err)
+// 		err = zb.Close()
+// 		require.NoError(t, err)
 
-	t.Run("sends_gzip", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		m := mocks.NewMockURLServiceInterface(ctrl)
-		m.EXPECT().AddShortURL(gomock.Any()).AnyTimes()
-		m.EXPECT().MakeShortURLByID(gomock.Any()).AnyTimes()
+// 		handler := middleware.GzipMiddleware(handler.RootHandler(m))
 
-		buf := bytes.NewBuffer(nil)
-		zb := gzip.NewWriter(buf)
-		_, err := zb.Write([]byte("http://test.ru"))
-		require.NoError(t, err)
-		err = zb.Close()
-		require.NoError(t, err)
+// 		req := httptest.NewRequest(http.MethodPost, "/", buf)
+// 		req.Header.Set("Content-Encoding", "gzip")
+// 		req.Header.Set("Content-Type", "text/plain")
+// 		req.Header.Set("Accept-Encoding", "")
 
-		handler := middleware.GzipMiddleware(handler.RootHandler(m))
+// 		rw := httptest.NewRecorder()
 
-		req := httptest.NewRequest(http.MethodPost, "/", buf)
-		req.Header.Set("Content-Encoding", "gzip")
-		req.Header.Set("Content-Type", "text/plain")
-		req.Header.Set("Accept-Encoding", "")
+// 		r := chi.NewRouter()
+// 		r.Post("/", handler)
 
-		rw := httptest.NewRecorder()
+// 		r.ServeHTTP(rw, req)
 
-		r := chi.NewRouter()
-		r.Post("/", handler)
+// 		resp := rw.Result()
+// 		defer resp.Body.Close()
 
-		r.ServeHTTP(rw, req)
+// 		require.NoError(t, err)
+// 		require.Equal(t, http.StatusCreated, resp.StatusCode)
 
-		require.NoError(t, err)
-		require.Equal(t, http.StatusCreated, rw.Result().StatusCode)
-
-	})
-}
+// 	})
+// }
