@@ -19,6 +19,15 @@ type response struct {
 
 func JSONShortenHandler(svc service.URLServiceInterface) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		// *********************
+		//bodyBytes, _ := io.ReadAll(req.Body)
+		//req.Body.Close()
+
+		//logging.Logger.Debug("", zap.String("BODY", string(bodyBytes)))
+
+		//req.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+		//**********************
+
 		decoder := json.NewDecoder(req.Body)
 		defer req.Body.Close()
 
@@ -26,7 +35,7 @@ func JSONShortenHandler(svc service.URLServiceInterface) http.HandlerFunc {
 
 		jr := &request{}
 		if err := decoder.Decode(jr); err != nil {
-			logging.Logger.Debug("cant decode json request", zap.Error(err))
+			logging.Logger.Error("cant decode json request", zap.Error(err))
 			rw.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -34,14 +43,14 @@ func JSONShortenHandler(svc service.URLServiceInterface) http.HandlerFunc {
 
 		ID, err := svc.AddShortURL(jr.URL)
 		if err != nil {
-			logging.Logger.Debug("cant add make short URL", zap.Error(err))
+			logging.Logger.Error("cant add short URL", zap.Error(err))
 			rw.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
 		shortURL, err := svc.MakeShortURLByID(ID)
 		if err != nil {
-			logging.Logger.Debug("cant add make short URL", zap.Error(err))
+			logging.Logger.Debug("cant make short URL", zap.Error(err))
 			rw.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -60,7 +69,7 @@ func JSONShortenHandler(svc service.URLServiceInterface) http.HandlerFunc {
 			logging.Logger.Debug("error encoding response", zap.Error(err))
 			return
 		}
-		logging.Logger.Debug("response is encoded", zap.Error(err))
+		logging.Logger.Debug("response is send", zap.Error(err))
 
 	})
 }

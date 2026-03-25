@@ -5,57 +5,62 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/SergeyRG/shortener/internal/logging"
+	"go.uber.org/zap"
 )
 
-type conditionalCompressWriter struct {
-	gzipRespWriter
-	compress *bool
-}
-
-func (ccw conditionalCompressWriter) Write(b []byte) (int, error) {
-	//При первом вызове Write проверить выполнение условий для сжатия ответа
-	if ccw.compress == nil {
-		ct := ccw.rw.Header().Get("Content-Type")
-		if strings.Contains(ct, "application/json") ||
-			strings.Contains(ct, "text/html") {
-			*ccw.compress = true
-		} else {
-			*ccw.compress = false
-		}
-	}
-	if *ccw.compress {
-		return ccw.zw.Write(b)
-	} else {
-		return ccw.rw.Write(b)
-	}
-}
-
 type gzipRespWriter struct {
-	rw http.ResponseWriter
+	http.ResponseWriter
 	zw *gzip.Writer
 }
 
-func newGzipRespWriter(rw http.ResponseWriter) gzipRespWriter {
-	return gzipRespWriter{
-		rw: rw,
-		zw: gzip.NewWriter(rw),
+func newGzipRespWriter(rw http.ResponseWriter) *gzipRespWriter {
+	return &gzipRespWriter{
+		ResponseWriter: rw,
+		zw:             nil,
 	}
 }
 
-func (grw gzipRespWriter) Header() http.Header {
-	return grw.rw.Header()
+func (grw *gzipRespWriter) Write(b []byte) (int, error) {
+	if grw.zw != nil {
+		return grw.zw.Write(b)
+	}
+
+	//При первом вызове Write проверить выполнение условий для сжатия ответа
+	ct := grw.Header().Get("Content-Type")
+
+	shouldCompress := strings.Contains(ct, "application/json") ||
+		strings.Contains(ct, "text/html")
+
+	if shouldCompress {
+		grw.Header().Set("Content-Encoding", "gzip")
+		grw.Header().Del("Content-Length")
+		grw.zw = gzip.NewWriter(grw.ResponseWriter)
+
+		return grw.zw.Write(b)
+	}
+
+	return grw.ResponseWriter.Write(b)
 }
 
-func (grw gzipRespWriter) WriteHeader(status int) {
-	grw.rw.WriteHeader(status)
+func (grw *gzipRespWriter) WriteHeader(statusCode int) {
+	ct := grw.Header().Get("Content-Type")
+	shouldCompress := strings.Contains(ct, "application/json") || strings.Contains(ct, "text/html")
+
+	if shouldCompress {
+		grw.Header().Set("Content-Encoding", "gzip")
+		grw.Header().Del("Content-Length")
+		grw.zw = gzip.NewWriter(grw.ResponseWriter)
+	}
+	grw.ResponseWriter.WriteHeader(statusCode)
 }
 
-func (grw gzipRespWriter) Write(b []byte) (int, error) {
-	return grw.zw.Write(b)
-}
-
-func (grw gzipRespWriter) Close() error {
-	return grw.zw.Close()
+func (grw *gzipRespWriter) Close() error {
+	if grw.zw != nil {
+		return grw.zw.Close()
+	}
+	return nil
 }
 
 type gzipReader struct {
@@ -88,13 +93,13 @@ func (c *gzipReader) Close() error {
 func GzipMiddleware(h http.HandlerFunc) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		ow := rw
+		logging.Logger.Debug("получен запрос",
+			zap.String("Header", strings.Join(r.Header["Accept-Encoding"], ",")))
 
 		acceptEncoding := strings.Join(r.Header["Accept-Encoding"], ",")
 		supportsGzip := strings.Contains(acceptEncoding, "gzip")
 		if supportsGzip {
-			cw := conditionalCompressWriter{
-				gzipRespWriter: newGzipRespWriter(rw),
-			}
+			cw := newGzipRespWriter(rw)
 			ow = cw
 			defer cw.Close()
 		}

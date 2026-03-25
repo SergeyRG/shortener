@@ -25,7 +25,7 @@ func run() error {
 		log.Fatalf("Ошибка валидации конфигурации: %s", err)
 	}
 
-	if err := logging.Initialize("info"); err != nil {
+	if err := logging.Initialize("debug"); err != nil {
 		log.Fatalf("Ошибка инициализации системы логирования: %s", err)
 	}
 	logger := logging.Logger
