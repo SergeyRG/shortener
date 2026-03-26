@@ -82,7 +82,7 @@ func NewConfig() (Config, error) {
 	BaseShortURLAddress := flag.String(
 		"b", "http://localhost:8080", "base URL for short URLs")
 	FileStoragePath := flag.String(
-		"f", binDir+"/file_storage.json", "base URL for short URLs")
+		"f", binDir+"/file_storage.NDJSON", "base URL for short URLs")
 
 	flag.Parse()
 

@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -43,26 +42,26 @@ func run() error {
 	}
 	defer fileStore.Close()
 
-	var stor map[string]string
-	fileStoreData, err := io.ReadAll(fileStore)
-	if err == nil {
-		if unmarshalErr := json.Unmarshal(fileStoreData, &stor); unmarshalErr != nil {
-			logger.Error("Ошибка анмаршалинга json. репозиторий будет пустым", zap.Error(err))
-			stor = nil
-		}
-	} else {
-		logger.Error("Ошибка чтения файла сохраненных URL. репозиторий будет пустым", zap.Error(err))
-	}
+	decoder := json.NewDecoder(fileStore)
+	stor := make(map[string]string)
 
-	if stor == nil {
-		stor = make(map[string]string)
+	for decoder.More() {
+		if err := decoder.Decode(&stor); err != nil {
+			logging.Logger.Error("Ошибка восстановления сохраненных URL", zap.Error(err))
+			stor = make(map[string]string)
+			break
+		}
+	}
+	if len(stor) > 0 {
+		logger.Info("Сохраненные URL успешно загружены", zap.Int("count", len(stor)))
 	} else {
-		logger.Info("Сохраненные URL успешно загружены")
+		logger.Info("Файл сохраненных URL пустой, либо произошла ошибка чтения")
 	}
 
 	repo := repository.NewInMemoryRepositoryURL(stor)
+	ps := repository.NewFileRepositoryURL(cfg.FileStoragePath)
 	g := service.URLGenerator{}
-	svc := service.NewURLService(repo, cfg, g)
+	svc := service.NewURLService(repo, ps, cfg, g)
 
 	rootHandler := logging.WithLogging(middleware.GzipMiddleware(handler.RootHandler(svc)))
 	redirectHandler := logging.WithLogging(middleware.GzipMiddleware(handler.RedirectHandler(svc)))

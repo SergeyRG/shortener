@@ -46,9 +46,10 @@ func TestURLService_GetOriginalURLByID(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := mocks.NewMockURLRepository(ctrl)
+			mockPS := mocks.NewMockURLRepository(ctrl)
 			m.EXPECT().GetByID(tt.id).Times(1).Return(tt.want, tt.wantErr)
 			g := service.URLGenerator{}
-			us := service.NewURLService(m, tt.cfg, g)
+			us := service.NewURLService(m, mockPS, tt.cfg, g)
 
 			got, gotErr := us.GetOriginalURLByID(tt.id)
 
@@ -97,8 +98,9 @@ func TestURLService_MakeShortURLByID(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := mocks.NewMockURLRepository(ctrl)
+			mockPS := mocks.NewMockURLRepository(ctrl)
 			g := service.URLGenerator{}
-			us := service.NewURLService(m, tt.cfg, g)
+			us := service.NewURLService(m, mockPS, tt.cfg, g)
 
 			got, gotErr := us.MakeShortURLByID(tt.id)
 
@@ -161,6 +163,7 @@ func TestURLService_AddShortURL(t *testing.T) {
 
 			mg := mocks.NewMockShortURLIDGenerator(ctrl)
 			mr := mocks.NewMockURLRepository(ctrl)
+			mockPS := mocks.NewMockURLRepository(ctrl)
 
 			mg.EXPECT().CalculateShortURLID(
 				gomock.Cond(func(x any) bool { return strings.Contains(x.(string), tt.url) })).
@@ -169,7 +172,7 @@ func TestURLService_AddShortURL(t *testing.T) {
 			mr.EXPECT().Add(tt.url, tt.wantShortURL).Times(tt.attempts).Return(tt.repoErr)
 			mr.EXPECT().GetByID(gomock.Any()).AnyTimes().Return("test", nil)
 
-			u := service.NewURLService(mr, tt.cfg, mg)
+			u := service.NewURLService(mr, mockPS, tt.cfg, mg)
 
 			got, gotErr := u.AddShortURL(tt.url)
 			if tt.wantErr != nil {

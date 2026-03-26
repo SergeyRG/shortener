@@ -36,6 +36,7 @@ func (r *InMemoryRepositoryURL) GetByID(id string) (string, error) {
 
 }
 
-func (r *InMemoryRepositoryURL) GetALL() map[string]string {
-	return r.stor
+func (r *InMemoryRepositoryURL) Delete(id string) error {
+	delete(r.stor, id)
+	return nil
 }

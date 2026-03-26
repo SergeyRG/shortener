@@ -54,20 +54,6 @@ func (mr *MockURLServiceInterfaceMockRecorder) AddShortURL(url any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddShortURL", reflect.TypeOf((*MockURLServiceInterface)(nil).AddShortURL), url)
 }
 
-// ExportRepoToJSONFile mocks base method.
-func (m *MockURLServiceInterface) ExportRepoToJSONFile() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ExportRepoToJSONFile")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ExportRepoToJSONFile indicates an expected call of ExportRepoToJSONFile.
-func (mr *MockURLServiceInterfaceMockRecorder) ExportRepoToJSONFile() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExportRepoToJSONFile", reflect.TypeOf((*MockURLServiceInterface)(nil).ExportRepoToJSONFile))
-}
-
 // GetOriginalURLByID mocks base method.
 func (m *MockURLServiceInterface) GetOriginalURLByID(id string) (string, error) {
 	m.ctrl.T.Helper()

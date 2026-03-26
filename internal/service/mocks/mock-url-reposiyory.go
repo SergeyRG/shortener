@@ -53,18 +53,18 @@ func (mr *MockURLRepositoryMockRecorder) Add(url, id any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Add", reflect.TypeOf((*MockURLRepository)(nil).Add), url, id)
 }
 
-// GetALL mocks base method.
-func (m *MockURLRepository) GetALL() map[string]string {
+// Delete mocks base method.
+func (m *MockURLRepository) Delete(id string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetALL")
-	ret0, _ := ret[0].(map[string]string)
+	ret := m.ctrl.Call(m, "Delete", id)
+	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// GetALL indicates an expected call of GetALL.
-func (mr *MockURLRepositoryMockRecorder) GetALL() *gomock.Call {
+// Delete indicates an expected call of Delete.
+func (mr *MockURLRepositoryMockRecorder) Delete(id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetALL", reflect.TypeOf((*MockURLRepository)(nil).GetALL))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockURLRepository)(nil).Delete), id)
 }
 
 // GetByID mocks base method.

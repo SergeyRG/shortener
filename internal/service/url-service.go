@@ -3,25 +3,26 @@ package service
 import (
 	"crypto/sha256"
 	"encoding/base32"
-	"encoding/json"
+	"fmt"
 	"net/url"
-	"os"
 
 	"github.com/SergeyRG/shortener/internal/config"
 	urlErrors "github.com/SergeyRG/shortener/internal/errors"
 )
 
 type URLService struct {
-	repo        URLRepository
-	cfg         config.Config
-	idGenerator ShortURLIDGenerator
+	repo           URLRepository
+	persistentStor URLRepository
+	cfg            config.Config
+	idGenerator    ShortURLIDGenerator
 }
 
-func NewURLService(r URLRepository, cfg config.Config, idGenerator ShortURLIDGenerator) *URLService {
+func NewURLService(r URLRepository, ps URLRepository, cfg config.Config, idGenerator ShortURLIDGenerator) *URLService {
 	return &URLService{
-		repo:        r,
-		cfg:         cfg,
-		idGenerator: idGenerator,
+		repo:           r,
+		persistentStor: ps,
+		cfg:            cfg,
+		idGenerator:    idGenerator,
 	}
 }
 
@@ -50,6 +51,11 @@ func (u *URLService) AddShortURL(url string) (string, error) {
 		err := u.repo.Add(url, id)
 
 		if err == nil {
+			err = u.persistentStor.Add(url, id)
+			if err != nil {
+				u.repo.Delete(id)
+				return "", fmt.Errorf("Ошибка сохранения в постоянное хранилище")
+			}
 			return id, nil
 		}
 
@@ -68,26 +74,6 @@ func (u *URLService) AddShortURL(url string) (string, error) {
 			return "", urlErrors.ErrNotEnoughID
 		}
 	}
-}
-
-func (u *URLService) ExportRepoToJSONFile() error {
-	bytes, err := json.Marshal(u.repo.GetALL())
-	if err != nil {
-		return err
-	}
-	f, err := os.OpenFile(u.cfg.FileStoragePath, os.O_WRONLY|os.O_TRUNC, 0644)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	_, err = f.Write(bytes)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 type URLGenerator struct{}
