@@ -7,6 +7,7 @@ import (
 
 	"github.com/SergeyRG/shortener/internal/config"
 	urlErrors "github.com/SergeyRG/shortener/internal/errors"
+	"github.com/SergeyRG/shortener/internal/repository"
 	"github.com/SergeyRG/shortener/internal/service"
 	"github.com/SergeyRG/shortener/internal/service/mocks"
 	"github.com/stretchr/testify/assert"
@@ -47,7 +48,9 @@ func TestURLService_GetOriginalURLByID(t *testing.T) {
 
 			m := mocks.NewMockURLRepository(ctrl)
 			mockPS := mocks.NewMockURLRepository(ctrl)
+
 			m.EXPECT().GetByID(tt.id).Times(1).Return(tt.want, tt.wantErr)
+
 			g := service.URLGenerator{}
 			us := service.NewURLService(m, mockPS, tt.cfg, g)
 
@@ -163,7 +166,7 @@ func TestURLService_AddShortURL(t *testing.T) {
 
 			mg := mocks.NewMockShortURLIDGenerator(ctrl)
 			mr := mocks.NewMockURLRepository(ctrl)
-			mockPS := mocks.NewMockURLRepository(ctrl)
+			mockPS := repository.NewInMemoryRepositoryURL(nil)
 
 			mg.EXPECT().CalculateShortURLID(
 				gomock.Cond(func(x any) bool { return strings.Contains(x.(string), tt.url) })).

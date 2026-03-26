@@ -47,5 +47,5 @@ func (r *FileRepositoryURL) GetByID(id string) (string, error) {
 }
 
 func (r *FileRepositoryURL) Delete(id string) error {
-	return fmt.Errorf("Вызван не поддерживаемый метод FileRepository.Delete")
+	return fmt.Errorf("вызван не поддерживаемый метод FileRepository.Delete")
 }
