@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -36,8 +37,14 @@ func run() error {
 
 	logger.Info("загрузка сохраненных сокращенных URL")
 
+	fileStore, err := os.OpenFile(cfg.FileStoragePath, os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		logger.Fatal("Не удалось открыть/создать файл", zap.Error(err))
+	}
+	defer fileStore.Close()
+
 	var stor map[string]string
-	fileStoreData, err := os.ReadFile(cfg.FileStoragePath)
+	fileStoreData, err := io.ReadAll(fileStore)
 	if err == nil {
 		if unmarshalErr := json.Unmarshal(fileStoreData, &stor); unmarshalErr != nil {
 			logger.Error("Ошибка анмаршалинга json. репозиторий будет пустым", zap.Error(err))
