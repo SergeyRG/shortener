@@ -3,7 +3,9 @@ package service
 import (
 	"crypto/sha256"
 	"encoding/base32"
+	"encoding/json"
 	"net/url"
+	"os"
 
 	"github.com/SergeyRG/shortener/internal/config"
 	urlErrors "github.com/SergeyRG/shortener/internal/errors"
@@ -66,6 +68,26 @@ func (u *URLService) AddShortURL(url string) (string, error) {
 			return "", urlErrors.ErrNotEnoughID
 		}
 	}
+}
+
+func (u *URLService) ExportRepoToJSONFile() error {
+	bytes, err := json.Marshal(u.repo.GetALL())
+	if err != nil {
+		return err
+	}
+	f, err := os.OpenFile(u.cfg.FileStoragePath, os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	_, err = f.Write(bytes)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type URLGenerator struct{}

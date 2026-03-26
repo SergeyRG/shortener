@@ -4,4 +4,5 @@ package service
 type URLRepository interface {
 	Add(url string, id string) error
 	GetByID(id string) (url string, err error)
+	GetALL() map[string]string
 }

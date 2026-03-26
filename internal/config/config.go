@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 )
 
@@ -65,13 +66,23 @@ func validateBaseURL(val string) error {
 type Config struct {
 	ServerAddress       string
 	BaseShortURLAddress string
+	FileStoragePath     string
 }
 
 func NewConfig() (Config, error) {
+	binPath, err := os.Executable()
+	if err != nil {
+		return Config{}, err
+	}
+
+	binDir := filepath.Dir(binPath)
+
 	ServerAddress := flag.String(
 		"a", ":8080", "address and port to run server")
 	BaseShortURLAddress := flag.String(
 		"b", "http://localhost:8080", "base URL for short URLs")
+	FileStoragePath := flag.String(
+		"f", binDir+"/file_storage.json", "base URL for short URLs")
 
 	flag.Parse()
 
@@ -80,6 +91,9 @@ func NewConfig() (Config, error) {
 	}
 	if val, exist := os.LookupEnv("BASE_URL"); exist {
 		*BaseShortURLAddress = val
+	}
+	if val, exist := os.LookupEnv("FILE_STORAGE_PATH"); exist {
+		*FileStoragePath = val
 	}
 
 	if err := validateServerAddress(*ServerAddress); err != nil {
@@ -93,6 +107,7 @@ func NewConfig() (Config, error) {
 	return Config{
 			ServerAddress:       *ServerAddress,
 			BaseShortURLAddress: *BaseShortURLAddress,
+			FileStoragePath:     *FileStoragePath,
 		},
 		nil
 }

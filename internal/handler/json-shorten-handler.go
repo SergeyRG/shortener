@@ -19,14 +19,6 @@ type response struct {
 
 func JSONShortenHandler(svc service.URLServiceInterface) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		// *********************
-		//bodyBytes, _ := io.ReadAll(req.Body)
-		//req.Body.Close()
-
-		//logging.Logger.Debug("", zap.String("BODY", string(bodyBytes)))
-
-		//req.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-		//**********************
 
 		decoder := json.NewDecoder(req.Body)
 		defer req.Body.Close()
@@ -69,7 +61,7 @@ func JSONShortenHandler(svc service.URLServiceInterface) http.HandlerFunc {
 			logging.Logger.Debug("error encoding response", zap.Error(err))
 			return
 		}
-		logging.Logger.Debug("response is send", zap.Error(err))
+		logging.Logger.Debug("response sent", zap.Error(err))
 
 	})
 }

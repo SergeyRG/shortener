@@ -53,6 +53,20 @@ func (mr *MockURLRepositoryMockRecorder) Add(url, id any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Add", reflect.TypeOf((*MockURLRepository)(nil).Add), url, id)
 }
 
+// GetALL mocks base method.
+func (m *MockURLRepository) GetALL() map[string]string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetALL")
+	ret0, _ := ret[0].(map[string]string)
+	return ret0
+}
+
+// GetALL indicates an expected call of GetALL.
+func (mr *MockURLRepositoryMockRecorder) GetALL() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetALL", reflect.TypeOf((*MockURLRepository)(nil).GetALL))
+}
+
 // GetByID mocks base method.
 func (m *MockURLRepository) GetByID(id string) (string, error) {
 	m.ctrl.T.Helper()

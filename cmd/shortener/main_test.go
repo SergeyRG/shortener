@@ -18,7 +18,7 @@ import (
 )
 
 func Test_rootHandler(t *testing.T) {
-	repo := repository.NewInMemoryRepositoryURL()
+	repo := repository.NewInMemoryRepositoryURL(nil)
 	cfg := config.Config{
 		ServerAddress:       ":8080",
 		BaseShortURLAddress: "http://localhost:8080",
@@ -76,7 +76,7 @@ func Test_rootHandler(t *testing.T) {
 }
 
 func Test_redirectHandler(t *testing.T) {
-	repo := repository.NewInMemoryRepositoryURL()
+	repo := repository.NewInMemoryRepositoryURL(nil)
 	repo.Add("http://ya.ru", "HGHQZJH6")
 	cfg := config.Config{
 		ServerAddress:       ":8080",
