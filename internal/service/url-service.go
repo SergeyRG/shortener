@@ -54,7 +54,7 @@ func (u *URLService) AddShortURL(url string) (string, error) {
 			err = u.persistentStor.Add(url, id)
 			if err != nil {
 				u.repo.Delete(id)
-				return "", fmt.Errorf("Ошибка сохранения в постоянное хранилище")
+				return "", fmt.Errorf("ошибка сохранения в постоянное хранилище")
 			}
 			return id, nil
 		}
