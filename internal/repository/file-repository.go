@@ -30,11 +30,7 @@ func (r *FileRepositoryURL) Add(url string, id string) error {
 		return err
 	}
 
-	_, err = file.Write([]byte(data))
-	if err != nil {
-		return err
-	}
-	_, err = file.Write([]byte("\n"))
+	_, err = file.Write(append(([]byte(data)), '\n'))
 	if err != nil {
 		return err
 	}
@@ -43,9 +39,9 @@ func (r *FileRepositoryURL) Add(url string, id string) error {
 }
 
 func (r *FileRepositoryURL) GetByID(id string) (string, error) {
-	return "", fmt.Errorf("not implemented")
+	return "", fmt.Errorf("вызван не поддерживаемый метод FileRepositoryURL.GetByID")
 }
 
 func (r *FileRepositoryURL) Delete(id string) error {
-	return fmt.Errorf("вызван не поддерживаемый метод FileRepository.Delete")
+	return fmt.Errorf("вызван не поддерживаемый метод FileRepositoryURL.Delete")
 }

@@ -45,35 +45,31 @@ func (u *URLService) MakeShortURLByID(id string) (string, error) {
 func (u *URLService) AddShortURL(url string) (string, error) {
 	var addition = ""
 	var id = ""
-	var iter = 1
-	for {
+	for iter := 1; iter <= 10; iter++ {
 		id = u.idGenerator.CalculateShortURLID(url + addition)
 		err := u.repo.Add(url, id)
 
-		if err == nil {
-			err = u.persistentStor.Add(url, id)
-			if err != nil {
+		switch err {
+		//Добавление в память прошло успешно. Пробуем сохранить в постоянное хранилище
+		case nil:
+			persErr := u.persistentStor.Add(url, id)
+			if persErr != nil {
 				u.repo.Delete(id)
 				return "", fmt.Errorf("ошибка сохранения в постоянное хранилище")
 			}
 			return id, nil
-		}
-
-		if err != urlErrors.ErrAlredyExist {
+		//Если такой id уже есть в памяти и url совпадает, то возвращаем этот id
+		//Если url не совпадает, то добавляем соль и пересчитываем id
+		case urlErrors.ErrAlredyExist:
+			if v, _ := u.repo.GetByID(id); v == url {
+				return id, nil
+			}
+			addition += "1"
+		default:
 			return "", urlErrors.ErrUnexpected
 		}
-
-		if v, _ := u.repo.GetByID(id); v == url {
-			return id, nil
-		}
-
-		addition += "1"
-		iter += 1
-
-		if iter == 11 {
-			return "", urlErrors.ErrNotEnoughID
-		}
 	}
+	return "", urlErrors.ErrNotEnoughID
 }
 
 type URLGenerator struct{}

@@ -67,6 +67,7 @@ type Config struct {
 	ServerAddress       string
 	BaseShortURLAddress string
 	FileStoragePath     string
+	DBDSN               string
 }
 
 func NewConfig() (Config, error) {
@@ -83,6 +84,7 @@ func NewConfig() (Config, error) {
 		"b", "http://localhost:8080", "base URL for short URLs")
 	FileStoragePath := flag.String(
 		"f", binDir+"/file_storage.NDJSON", "base URL for short URLs")
+	DBDSN := flag.String("d", "", "DSN to connect to the database.")
 
 	flag.Parse()
 
@@ -94,6 +96,9 @@ func NewConfig() (Config, error) {
 	}
 	if val, exist := os.LookupEnv("FILE_STORAGE_PATH"); exist {
 		*FileStoragePath = val
+	}
+	if val, exist := os.LookupEnv("DATABASE_DSN"); exist {
+		*DBDSN = val
 	}
 
 	if err := validateServerAddress(*ServerAddress); err != nil {
@@ -108,6 +113,7 @@ func NewConfig() (Config, error) {
 			ServerAddress:       *ServerAddress,
 			BaseShortURLAddress: *BaseShortURLAddress,
 			FileStoragePath:     *FileStoragePath,
+			DBDSN:               *DBDSN,
 		},
 		nil
 }
