@@ -8,7 +8,12 @@ type InMemoryRepositoryURL struct {
 	stor map[string]string
 }
 
-func NewInMemoryRepositoryURL() *InMemoryRepositoryURL {
+func NewInMemoryRepositoryURL(data map[string]string) *InMemoryRepositoryURL {
+	if data != nil {
+		return &InMemoryRepositoryURL{
+			stor: data,
+		}
+	}
 	return &InMemoryRepositoryURL{
 		stor: make(map[string]string),
 	}
@@ -29,4 +34,9 @@ func (r *InMemoryRepositoryURL) GetByID(id string) (string, error) {
 		return "", urlErrors.ErrURLNotFound
 	}
 
+}
+
+func (r *InMemoryRepositoryURL) Delete(id string) error {
+	delete(r.stor, id)
+	return nil
 }

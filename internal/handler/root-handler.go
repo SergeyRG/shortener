@@ -2,19 +2,14 @@ package handler
 
 import (
 	"io"
-	"log"
 	"net/http"
 	"strings"
 
 	"github.com/SergeyRG/shortener/internal/service"
 )
 
-func RootHandler(svc service.URLServiceInterface) func(rw http.ResponseWriter, req *http.Request) {
+func RootHandler(svc service.URLServiceInterface) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
-
-		log.Printf("Content-type: %s\n", req.Header.Get("content-type"))
-		log.Printf("url: %s\n", req.URL.Path)
-		log.Printf("method: %s\n", req.Method)
 
 		contentType := req.Header.Get("Content-Type")
 		if !strings.HasPrefix(contentType, "text/plain") {
@@ -28,7 +23,6 @@ func RootHandler(svc service.URLServiceInterface) func(rw http.ResponseWriter, r
 			return
 		}
 
-		log.Printf("Body: %s\n", body)
 		url := string(body)
 
 		id, err := svc.AddShortURL(url)
