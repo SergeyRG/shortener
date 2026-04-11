@@ -10,6 +10,7 @@
 package mocks
 
 import (
+	context "context"
 	reflect "reflect"
 
 	gomock "go.uber.org/mock/gomock"
@@ -40,44 +41,44 @@ func (m *MockURLRepository) EXPECT() *MockURLRepositoryMockRecorder {
 }
 
 // Add mocks base method.
-func (m *MockURLRepository) Add(url, id string) error {
+func (m *MockURLRepository) Add(ctx context.Context, url, id string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Add", url, id)
+	ret := m.ctrl.Call(m, "Add", ctx, url, id)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Add indicates an expected call of Add.
-func (mr *MockURLRepositoryMockRecorder) Add(url, id any) *gomock.Call {
+func (mr *MockURLRepositoryMockRecorder) Add(ctx, url, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Add", reflect.TypeOf((*MockURLRepository)(nil).Add), url, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Add", reflect.TypeOf((*MockURLRepository)(nil).Add), ctx, url, id)
 }
 
 // Delete mocks base method.
-func (m *MockURLRepository) Delete(id string) error {
+func (m *MockURLRepository) Delete(ctx context.Context, id string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", id)
+	ret := m.ctrl.Call(m, "Delete", ctx, id)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockURLRepositoryMockRecorder) Delete(id any) *gomock.Call {
+func (mr *MockURLRepositoryMockRecorder) Delete(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockURLRepository)(nil).Delete), id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockURLRepository)(nil).Delete), ctx, id)
 }
 
 // GetByID mocks base method.
-func (m *MockURLRepository) GetByID(id string) (string, error) {
+func (m *MockURLRepository) GetByID(ctx context.Context, id string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByID", id)
+	ret := m.ctrl.Call(m, "GetByID", ctx, id)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetByID indicates an expected call of GetByID.
-func (mr *MockURLRepositoryMockRecorder) GetByID(id any) *gomock.Call {
+func (mr *MockURLRepositoryMockRecorder) GetByID(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockURLRepository)(nil).GetByID), id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockURLRepository)(nil).GetByID), ctx, id)
 }

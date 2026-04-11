@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -33,16 +34,16 @@ func JSONShortenHandler(svc service.URLServiceInterface) http.HandlerFunc {
 		}
 		logging.Logger.Debug("json request is decoded")
 
-		ID, err := svc.AddShortURL(jr.URL)
+		ID, err := svc.AddShortURL(context.Background(), jr.URL)
 		if err != nil {
 			logging.Logger.Error("cant add short URL", zap.Error(err))
 			rw.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		shortURL, err := svc.MakeShortURLByID(ID)
+		shortURL, err := svc.MakeShortURLByID(context.Background(), ID)
 		if err != nil {
-			logging.Logger.Debug("cant make short URL", zap.Error(err))
+			logging.Logger.Error("cant make short URL", zap.Error(err))
 			rw.WriteHeader(http.StatusBadRequest)
 			return
 		}

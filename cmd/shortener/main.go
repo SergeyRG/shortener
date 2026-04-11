@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"database/sql"
 
@@ -14,13 +15,14 @@ import (
 	"github.com/SergeyRG/shortener/internal/middleware"
 	"github.com/SergeyRG/shortener/internal/repository"
 	"github.com/SergeyRG/shortener/internal/service"
+	"github.com/SergeyRG/shortener/migrations"
 	"github.com/go-chi/chi/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"go.uber.org/zap"
 )
 
 func main() {
-	if err := run(); err != nil {
+	if err := run(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("ошибка запуска приложения: %v", err)
 	}
 }
@@ -62,7 +64,7 @@ func run() error {
 		} else {
 			logger.Info("Файл сохраненных URL пустой, либо произошла ошибка чтения")
 		}
-		repo = repository.NewInMemoryRepositoryURL(stor)
+		repo = repository.NewInMemoryRepositoryURL(stor, cfg.FileStoragePath)
 
 	} else {
 		var err error
@@ -71,17 +73,24 @@ func run() error {
 			logger.Fatal("не удалось подключиться к БД", zap.Error(err),
 				zap.String("DSN", cfg.DBDSN))
 		}
+
 		defer db.Close()
+		repo, err = repository.NewPSQLDBRepositoryURL(db)
+		if err != nil {
+			logger.Fatal("не удалось инициализировать репозиторий", zap.Error(err))
+		}
+		err = migrations.RunMigrations(db)
+		if err != nil {
+			logger.Fatal("не удалось мигрировать БД", zap.Error(err))
+		}
 	}
 
-	ps := repository.NewFileRepositoryURL(cfg.FileStoragePath)
 	g := service.URLGenerator{}
-	svc := service.NewURLService(repo, ps, cfg, g)
+	svc := service.NewURLService(repo, cfg, g)
 
 	rootHandler := logging.WithLogging(middleware.GzipMiddleware(handler.RootHandler(svc)))
 	redirectHandler := logging.WithLogging(middleware.GzipMiddleware(handler.RedirectHandler(svc)))
 	JSONShortenHandler := logging.WithLogging(middleware.GzipMiddleware((handler.JSONShortenHandler(svc))))
-	CommandHandler := logging.WithLogging(middleware.GzipMiddleware((handler.CommandHandler(svc))))
 	DBPingHandler := logging.WithLogging(middleware.GzipMiddleware((handler.DBPingHandler(db))))
 
 	r := chi.NewRouter()
@@ -92,8 +101,30 @@ func run() error {
 		r.Get("/ping", DBPingHandler)
 		r.Get("/ping/", DBPingHandler)
 		r.Post("/api/shorten", JSONShortenHandler)
-		r.Post("/command", CommandHandler)
 	})
 	logger.Info("запуск приложения")
-	return http.ListenAndServe(cfg.ServerAddress, r)
+
+	server := &http.Server{
+		Addr:              cfg.ServerAddress,
+		Handler:           r,
+		ReadTimeout:       5 * time.Second,
+		WriteTimeout:      5 * time.Second,
+		ReadHeaderTimeout: 2 * time.Second,
+		IdleTimeout:       120 * time.Second,
+	}
+
+	// idleConnsClosed := make(chan struct{})
+	// go func() {
+	// 	sigint := make(chan os.Signal, 1)
+	// 	signal.Notify(sigint, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	// 	<-sigint // Ждем сигнал от теста
+
+	// 	// Завершаем работу сервера
+	// 	if err := server.Shutdown(context.Background()); err != nil {
+	// 		logger.Debug("HTTP server Shutdown", zap.Error(err))
+	// 	}
+	// 	close(idleConnsClosed)
+	// }()
+
+	return server.ListenAndServe()
 }

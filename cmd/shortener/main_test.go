@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -18,14 +20,15 @@ import (
 )
 
 func Test_rootHandler(t *testing.T) {
-	repo := repository.NewInMemoryRepositoryURL(nil)
-	ps := repository.NewInMemoryRepositoryURL(nil)
+	tmpFile, _ := os.CreateTemp("", "test_*.tmp")
+	tmpFile.Close()
+	repo := repository.NewInMemoryRepositoryURL(nil, tmpFile.Name())
 	cfg := config.Config{
 		ServerAddress:       ":8080",
 		BaseShortURLAddress: "http://localhost:8080",
 	}
 	g := service.URLGenerator{}
-	svc := service.NewURLService(repo, ps, cfg, g)
+	svc := service.NewURLService(repo, cfg, g)
 	h := http.HandlerFunc(handler.RootHandler(svc))
 	srv := httptest.NewServer(h)
 
@@ -77,15 +80,16 @@ func Test_rootHandler(t *testing.T) {
 }
 
 func Test_redirectHandler(t *testing.T) {
-	repo := repository.NewInMemoryRepositoryURL(nil)
-	ps := repository.NewInMemoryRepositoryURL(nil)
-	repo.Add("http://ya.ru", "HGHQZJH6")
+	tmpFile, _ := os.CreateTemp("", "test_*.tmp")
+	tmpFile.Close()
+	repo := repository.NewInMemoryRepositoryURL(nil, tmpFile.Name())
+	repo.Add(context.Background(), "http://ya.ru", "HGHQZJH6")
 	cfg := config.Config{
 		ServerAddress:       ":8080",
 		BaseShortURLAddress: "http://localhost:8080",
 	}
 	g := service.URLGenerator{}
-	svc := service.NewURLService(repo, ps, cfg, g)
+	svc := service.NewURLService(repo, cfg, g)
 	h := handler.RedirectHandler(svc)
 	r := chi.NewRouter()
 	r.Route("/{id}", func(r chi.Router) {

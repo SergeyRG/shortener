@@ -5,8 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	urlErrors "github.com/SergeyRG/shortener/internal/errors"
 	"github.com/SergeyRG/shortener/internal/handler"
+	"github.com/SergeyRG/shortener/internal/repository"
 	"github.com/SergeyRG/shortener/internal/service/mocks"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -25,7 +25,7 @@ func TestRedirectHandler(t *testing.T) {
 		{"test the return of the redirect", "NMGHFDBG",
 			"http:/test.ru", "http:/test.ru", nil},
 		{"test the return of the error on non existen id", "NMGHFDBG",
-			"http:/test.ru", "", urlErrors.ErrAlredyExist},
+			"http:/test.ru", "", repository.ErrAlredyExist},
 	}
 
 	for _, tt := range tests {
@@ -35,7 +35,7 @@ func TestRedirectHandler(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := mocks.NewMockURLServiceInterface(ctrl)
-			m.EXPECT().GetOriginalURLByID(tt.inID).Times(1).Return(tt.outURL, tt.wantErr)
+			m.EXPECT().GetOriginalURLByID(gomock.Any(), tt.inID).Times(1).Return(tt.outURL, tt.wantErr)
 
 			req := httptest.NewRequest(http.MethodGet, "/"+tt.inID, nil)
 			rw := httptest.NewRecorder()

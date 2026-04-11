@@ -52,9 +52,9 @@ func TestRootHandler(t *testing.T) {
 
 			m := mocks.NewMockURLServiceInterface(ctrl)
 			if tt.wantErr == nil {
-				m.EXPECT().AddShortURL(tt.inURL).Times(1).Return(tt.outID, tt.wantErr)
+				m.EXPECT().AddShortURL(gomock.Any(), tt.inURL).Times(1).Return(tt.outID, tt.wantErr)
 
-				m.EXPECT().MakeShortURLByID(tt.outID).Times(1).Return(tt.wantLocation, tt.wantErr)
+				m.EXPECT().MakeShortURLByID(gomock.Any(), tt.outID).Times(1).Return(tt.wantLocation, tt.wantErr)
 			}
 
 			req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.inURL))
