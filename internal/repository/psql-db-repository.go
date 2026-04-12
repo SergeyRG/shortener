@@ -69,7 +69,7 @@ func (r *PSQLDBRepositoryURL) AddBatch(ctx context.Context, data []model.Shorten
 	defer stmt.Close()
 
 	for _, v := range data {
-		_, sqlErr := stmt.ExecContext(ctx, v.ID, v.OriginUrl)
+		_, sqlErr := stmt.ExecContext(ctx, v.ID, v.OriginURL)
 		if sqlErr != nil {
 			return sqlErr
 		}

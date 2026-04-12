@@ -68,9 +68,9 @@ func (r *InMemoryRepositoryURL) Delete(ctx context.Context, id string) error {
 
 func (r *InMemoryRepositoryURL) AddBatch(ctx context.Context, data []model.ShortenData) error {
 	for _, v := range data {
-		err := r.Add(ctx, v.OriginUrl, v.ID)
+		err := r.Add(ctx, v.OriginURL, v.ID)
 		if err != nil {
-			return fmt.Errorf("ошибка добавления сокращенного URL для %s:%w", v.OriginUrl, err)
+			return fmt.Errorf("ошибка добавления сокращенного URL для %s:%w", v.OriginURL, err)
 		}
 	}
 	return nil

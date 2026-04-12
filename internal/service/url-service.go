@@ -66,14 +66,14 @@ func (u *URLService) AddBatch(ctx context.Context, data []BatchDataRequest) ([]B
 	shortURLs := make([]model.ShortenData, len(data))
 	response := make([]BatchDataResponse, len(data))
 	for i, v := range data {
-		shortUrlID := u.idGenerator.CalculateShortURLID(v.OriginalURL)
-		shortURL, err := u.MakeShortURLByID(ctx, shortUrlID)
+		shortURLID := u.idGenerator.CalculateShortURLID(v.OriginalURL)
+		shortURL, err := u.MakeShortURLByID(ctx, shortURLID)
 		if err != nil {
 			return nil, err
 		}
 		shortURLs[i] = model.ShortenData{
-			ID:        shortUrlID,
-			OriginUrl: v.OriginalURL,
+			ID:        shortURLID,
+			OriginURL: v.OriginalURL,
 		}
 		response[i] = BatchDataResponse{
 			CorrelationID: v.CorrelationID,
