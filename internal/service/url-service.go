@@ -50,9 +50,9 @@ func (u *URLService) AddShortURL(ctx context.Context, url string) (string, error
 			return id, nil
 		//Если такой id уже есть в памяти и url совпадает, то возвращаем этот id
 		//Если url не совпадает, то добавляем соль и пересчитываем id
-		case repository.ErrAlredyExist:
+		case repository.ErrAlreadyExist:
 			if v, _ := u.repo.GetByID(ctx, id); v == url {
-				return id, nil
+				return id, fmt.Errorf("%w", ErrConflict)
 			}
 			addition += "1"
 		default:
@@ -93,5 +93,4 @@ type URLGenerator struct{}
 func (ug URLGenerator) CalculateShortURLID(url string) string {
 	var hash = sha256.Sum256([]byte(url))
 	return string([]byte(base32.StdEncoding.EncodeToString(hash[:]))[:8])
-
 }

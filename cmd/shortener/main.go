@@ -22,7 +22,7 @@ import (
 )
 
 func main() {
-	if err := run(); err != nil && err != http.ErrServerClosed {
+	if err := run(); err != nil {
 		log.Fatalf("ошибка запуска приложения: %v", err)
 	}
 }

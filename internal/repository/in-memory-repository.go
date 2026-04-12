@@ -29,7 +29,7 @@ func NewInMemoryRepositoryURL(data map[string]string, filePath string) *InMemory
 
 func (r *InMemoryRepositoryURL) Add(ctx context.Context, url string, id string) error {
 	if _, ok := r.stor[id]; ok {
-		return ErrAlredyExist
+		return ErrAlreadyExist
 	}
 	file, err := os.OpenFile(r.filePath, os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {

@@ -31,7 +31,7 @@ func (r *PSQLDBRepositoryURL) Add(ctx context.Context, url string, id string) er
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			return ErrAlredyExist
+			return ErrAlreadyExist
 		}
 		return fmt.Errorf("%w:%w", ErrUnexpected, err)
 	}

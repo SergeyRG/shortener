@@ -153,7 +153,7 @@ func TestURLService_AddShortURL(t *testing.T) {
 			cfg:          cfg,
 			url:          "http://test.ru",
 			attempts:     10,
-			repoErr:      repository.ErrAlredyExist,
+			repoErr:      repository.ErrAlreadyExist,
 			wantShortURL: "DSDFDSDF",
 			wantErr:      repository.ErrNotEnoughID,
 		},

@@ -25,7 +25,7 @@ func TestRedirectHandler(t *testing.T) {
 		{"test the return of the redirect", "NMGHFDBG",
 			"http:/test.ru", "http:/test.ru", nil},
 		{"test the return of the error on non existen id", "NMGHFDBG",
-			"http:/test.ru", "", repository.ErrAlredyExist},
+			"http:/test.ru", "", repository.ErrAlreadyExist},
 	}
 
 	for _, tt := range tests {

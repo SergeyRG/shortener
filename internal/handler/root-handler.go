@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -24,15 +25,20 @@ func RootHandler(svc service.URLServiceInterface) http.HandlerFunc {
 		}
 
 		url := string(body)
-
 		id, err := svc.AddShortURL(req.Context(), url)
-		if err != nil {
+
+		if err != nil && !errors.Is(err, service.ErrConflict) {
 			http.Error(rw, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
+		status := http.StatusCreated
+		if errors.Is(err, service.ErrConflict) {
+			status = http.StatusConflict
+		}
+
 		rw.Header().Set("content-type", "text/plain")
-		rw.WriteHeader(http.StatusCreated)
+		rw.WriteHeader(status)
 
 		shortURL, err := svc.MakeShortURLByID(req.Context(), id)
 		if err != nil {

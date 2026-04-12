@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/SergeyRG/shortener/internal/logging"
@@ -35,10 +36,15 @@ func JSONShortenHandler(svc service.URLServiceInterface) http.HandlerFunc {
 		logging.Logger.Debug("json request is decoded")
 
 		ID, err := svc.AddShortURL(context.Background(), jr.URL)
-		if err != nil {
+		if err != nil && !errors.Is(err, service.ErrConflict) {
 			logging.Logger.Error("cant add short URL", zap.Error(err))
 			rw.WriteHeader(http.StatusBadRequest)
 			return
+		}
+
+		status := http.StatusCreated
+		if errors.Is(err, service.ErrConflict) {
+			status = http.StatusConflict
 		}
 
 		shortURL, err := svc.MakeShortURLByID(context.Background(), ID)
@@ -55,7 +61,7 @@ func JSONShortenHandler(svc service.URLServiceInterface) http.HandlerFunc {
 		encoder := json.NewEncoder(rw)
 
 		rw.Header().Set("Content-Type", "application/json")
-		rw.WriteHeader(http.StatusCreated)
+		rw.WriteHeader(status)
 		logging.Logger.Debug("encoding response and sending")
 		err = encoder.Encode(r)
 		if err != nil {
