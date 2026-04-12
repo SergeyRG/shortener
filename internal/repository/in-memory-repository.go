@@ -3,7 +3,10 @@ package repository
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
+
+	"github.com/SergeyRG/shortener/internal/model"
 )
 
 type InMemoryRepositoryURL struct {
@@ -60,5 +63,15 @@ func (r *InMemoryRepositoryURL) GetByID(ctx context.Context, id string) (string,
 
 func (r *InMemoryRepositoryURL) Delete(ctx context.Context, id string) error {
 	delete(r.stor, id)
+	return nil
+}
+
+func (r *InMemoryRepositoryURL) AddBatch(ctx context.Context, data []model.ShortenData) error {
+	for _, v := range data {
+		err := r.Add(ctx, v.OriginUrl, v.ID)
+		if err != nil {
+			return fmt.Errorf("ошибка добавления сокращенного URL для %s:%w", v.OriginUrl, err)
+		}
+	}
 	return nil
 }

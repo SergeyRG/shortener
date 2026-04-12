@@ -92,6 +92,7 @@ func run() error {
 	redirectHandler := logging.WithLogging(middleware.GzipMiddleware(handler.RedirectHandler(svc)))
 	JSONShortenHandler := logging.WithLogging(middleware.GzipMiddleware((handler.JSONShortenHandler(svc))))
 	DBPingHandler := logging.WithLogging(middleware.GzipMiddleware((handler.DBPingHandler(db))))
+	BatchAddHandler := logging.WithLogging(middleware.GzipMiddleware((handler.BatchAddHandler(svc))))
 
 	r := chi.NewRouter()
 	r.Route("/", func(r chi.Router) {
@@ -101,6 +102,7 @@ func run() error {
 		r.Get("/ping", DBPingHandler)
 		r.Get("/ping/", DBPingHandler)
 		r.Post("/api/shorten", JSONShortenHandler)
+		r.Post("/api/shorten/batch", BatchAddHandler)
 	})
 	logger.Info("запуск приложения")
 
@@ -112,19 +114,6 @@ func run() error {
 		ReadHeaderTimeout: 2 * time.Second,
 		IdleTimeout:       120 * time.Second,
 	}
-
-	// idleConnsClosed := make(chan struct{})
-	// go func() {
-	// 	sigint := make(chan os.Signal, 1)
-	// 	signal.Notify(sigint, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
-	// 	<-sigint // Ждем сигнал от теста
-
-	// 	// Завершаем работу сервера
-	// 	if err := server.Shutdown(context.Background()); err != nil {
-	// 		logger.Debug("HTTP server Shutdown", zap.Error(err))
-	// 	}
-	// 	close(idleConnsClosed)
-	// }()
 
 	return server.ListenAndServe()
 }

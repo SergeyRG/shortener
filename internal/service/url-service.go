@@ -8,6 +8,7 @@ import (
 	"net/url"
 
 	"github.com/SergeyRG/shortener/internal/config"
+	"github.com/SergeyRG/shortener/internal/model"
 	"github.com/SergeyRG/shortener/internal/repository"
 )
 
@@ -59,6 +60,32 @@ func (u *URLService) AddShortURL(ctx context.Context, url string) (string, error
 		}
 	}
 	return "", repository.ErrNotEnoughID
+}
+
+func (u *URLService) AddBatch(ctx context.Context, data []BatchDataRequest) ([]BatchDataResponse, error) {
+	shortURLs := make([]model.ShortenData, len(data))
+	response := make([]BatchDataResponse, len(data))
+	for i, v := range data {
+		shortUrlID := u.idGenerator.CalculateShortURLID(v.OriginalURL)
+		shortURL, err := u.MakeShortURLByID(ctx, shortUrlID)
+		if err != nil {
+			return nil, err
+		}
+		shortURLs[i] = model.ShortenData{
+			ID:        shortUrlID,
+			OriginUrl: v.OriginalURL,
+		}
+		response[i] = BatchDataResponse{
+			CorrelationID: v.CorrelationID,
+			ShortURL:      shortURL,
+		}
+	}
+	err := u.repo.AddBatch(ctx, shortURLs)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
 }
 
 type URLGenerator struct{}

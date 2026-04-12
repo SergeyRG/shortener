@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	model "github.com/SergeyRG/shortener/internal/model"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -52,6 +53,20 @@ func (m *MockURLRepository) Add(ctx context.Context, url, id string) error {
 func (mr *MockURLRepositoryMockRecorder) Add(ctx, url, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Add", reflect.TypeOf((*MockURLRepository)(nil).Add), ctx, url, id)
+}
+
+// AddBatch mocks base method.
+func (m *MockURLRepository) AddBatch(ctx context.Context, data []model.ShortenData) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddBatch", ctx, data)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddBatch indicates an expected call of AddBatch.
+func (mr *MockURLRepositoryMockRecorder) AddBatch(ctx, data any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddBatch", reflect.TypeOf((*MockURLRepository)(nil).AddBatch), ctx, data)
 }
 
 // Delete mocks base method.

@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	service "github.com/SergeyRG/shortener/internal/service"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -38,6 +39,21 @@ func NewMockURLServiceInterface(ctrl *gomock.Controller) *MockURLServiceInterfac
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockURLServiceInterface) EXPECT() *MockURLServiceInterfaceMockRecorder {
 	return m.recorder
+}
+
+// AddBatch mocks base method.
+func (m *MockURLServiceInterface) AddBatch(ctx context.Context, data []service.BatchDataRequest) ([]service.BatchDataResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddBatch", ctx, data)
+	ret0, _ := ret[0].([]service.BatchDataResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AddBatch indicates an expected call of AddBatch.
+func (mr *MockURLServiceInterfaceMockRecorder) AddBatch(ctx, data any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddBatch", reflect.TypeOf((*MockURLServiceInterface)(nil).AddBatch), ctx, data)
 }
 
 // AddShortURL mocks base method.

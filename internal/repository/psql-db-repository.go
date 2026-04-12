@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/SergeyRG/shortener/internal/model"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
@@ -51,4 +52,27 @@ func (r *PSQLDBRepositoryURL) Delete(ctx context.Context, id string) error {
 	query := "Delete from urls where id = $1"
 	_, err := r.stor.ExecContext(ctx, query, id)
 	return err
+}
+
+func (r *PSQLDBRepositoryURL) AddBatch(ctx context.Context, data []model.ShortenData) error {
+	TX, err := r.stor.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer TX.Rollback()
+
+	query := `INSERT INTO urls (id, url) VALUES($1,$2)`
+	stmt, err := TX.PrepareContext(ctx, query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for _, v := range data {
+		_, sqlErr := stmt.ExecContext(ctx, v.ID, v.OriginUrl)
+		if sqlErr != nil {
+			return sqlErr
+		}
+	}
+	return TX.Commit()
 }
