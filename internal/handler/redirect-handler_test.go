@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/SergeyRG/shortener/internal/handler"
+	"github.com/SergeyRG/shortener/internal/model"
 	"github.com/SergeyRG/shortener/internal/repository"
 	"github.com/SergeyRG/shortener/internal/service/mocks"
 	"github.com/go-chi/chi/v5"
@@ -18,14 +19,16 @@ func TestRedirectHandler(t *testing.T) {
 	tests := []struct {
 		name         string
 		inID         string
-		outURL       []string
+		outURL       model.ShortenModel
 		wantLocation string
 		wantErr      error
 	}{
 		{"test the return of the redirect", "NMGHFDBG",
-			[]string{"http:/test.ru", "test"}, "http:/test.ru", nil},
+			model.ShortenModel{ID: "test", OriginURL: "http:/test.ru", UserID: "test", DeletedFlag: false},
+			"http:/test.ru", nil},
 		{"test the return of the error on non existen id", "NMGHFDBG",
-			[]string{"http:/test.ru", "test"}, "", repository.ErrAlreadyExist},
+			model.ShortenModel{ID: "test", OriginURL: "http:/test.ru", UserID: "test", DeletedFlag: false},
+			"", repository.ErrAlreadyExist},
 	}
 
 	for _, tt := range tests {

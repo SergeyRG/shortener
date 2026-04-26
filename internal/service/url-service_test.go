@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/SergeyRG/shortener/internal/config"
+	"github.com/SergeyRG/shortener/internal/model"
 	"github.com/SergeyRG/shortener/internal/repository"
 	"github.com/SergeyRG/shortener/internal/service"
 	"github.com/SergeyRG/shortener/internal/service/mocks"
@@ -24,21 +25,21 @@ func TestURLService_GetOriginalURLByID(t *testing.T) {
 		name    string
 		cfg     config.Config
 		id      string
-		want    []string
+		want    model.ShortenModel
 		wantErr error
 	}{
 		{
 			name:    "check that the value received from the repository is being returned",
 			cfg:     cfg,
 			id:      "DFSDFDD",
-			want:    []string{"http://test.ru", "test"},
+			want:    model.ShortenModel{ID: "test", OriginURL: "http:/test.ru", UserID: "test", DeletedFlag: false},
 			wantErr: nil,
 		},
 		{
 			name:    "check that an error is returned if an error has occurred in the repository",
 			cfg:     cfg,
 			id:      "DFSDFDD",
-			want:    []string{"http://test.ru", "test"},
+			want:    model.ShortenModel{ID: "test", OriginURL: "http:/test.ru", UserID: "test", DeletedFlag: false},
 			wantErr: errors.New("test"),
 		},
 	}
@@ -171,7 +172,8 @@ func TestURLService_AddShortURL(t *testing.T) {
 				Times(tt.attempts).Return(tt.wantShortURL)
 
 			mr.EXPECT().Add(context.Background(), tt.url, tt.wantShortURL, "test").Times(tt.attempts).Return(tt.repoErr)
-			mr.EXPECT().GetByID(gomock.Any(), gomock.Any()).AnyTimes().Return([]string{"test", "test"}, nil)
+			mr.EXPECT().GetByID(gomock.Any(), gomock.Any()).AnyTimes().Return(
+				model.ShortenModel{ID: "test", OriginURL: "http:/test.ru", UserID: "test", DeletedFlag: false}, nil)
 
 			u := service.NewURLService(mr, tt.cfg, mg)
 

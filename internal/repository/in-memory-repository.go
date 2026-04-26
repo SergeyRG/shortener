@@ -10,11 +10,11 @@ import (
 )
 
 type InMemoryRepositoryURL struct {
-	stor     map[string][]string
+	stor     map[string]model.ShortenModel
 	filePath string
 }
 
-func NewInMemoryRepositoryURL(data map[string][]string, filePath string) *InMemoryRepositoryURL {
+func NewInMemoryRepositoryURL(data map[string]model.ShortenModel, filePath string) *InMemoryRepositoryURL {
 	if data != nil {
 		return &InMemoryRepositoryURL{
 			stor:     data,
@@ -22,7 +22,7 @@ func NewInMemoryRepositoryURL(data map[string][]string, filePath string) *InMemo
 		}
 	}
 	return &InMemoryRepositoryURL{
-		stor:     make(map[string][]string),
+		stor:     make(map[string]model.ShortenModel),
 		filePath: filePath,
 	}
 }
@@ -37,7 +37,11 @@ func (r *InMemoryRepositoryURL) Add(ctx context.Context, url string, id string, 
 	}
 	defer file.Close()
 
-	entry := map[string][]string{id: {url, userID}}
+	entry := map[string]model.ShortenModel{id: {
+		ID:          id,
+		OriginURL:   url,
+		UserID:      userID,
+		DeletedFlag: false}}
 
 	data, err := json.Marshal(entry)
 	if err != nil {
@@ -48,25 +52,27 @@ func (r *InMemoryRepositoryURL) Add(ctx context.Context, url string, id string, 
 	if err != nil {
 		return err
 	}
-	r.stor[id] = []string{url, userID}
+	r.stor[id] = entry[id]
 	return nil
 }
 
-func (r *InMemoryRepositoryURL) GetByID(ctx context.Context, id string) ([]string, error) {
+func (r *InMemoryRepositoryURL) GetByID(ctx context.Context, id string) (model.ShortenModel, error) {
 	if v, ok := r.stor[id]; ok {
 		return v, nil
 	} else {
-		return nil, ErrURLNotFound
+		return model.ShortenModel{}, ErrURLNotFound
 	}
 }
 
-func (r *InMemoryRepositoryURL) GetByUserID(ctx context.Context, userID string) (url []model.ShortenData, err error) {
-	var result []model.ShortenData
+func (r *InMemoryRepositoryURL) GetByUserID(ctx context.Context, userID string) (url []model.ShortenModel, err error) {
+	var result []model.ShortenModel
 	for k, v := range r.stor {
-		if v[1] == userID {
-			result = append(result, model.ShortenData{
-				ID:        k,
-				OriginURL: v[0],
+		if v.UserID == userID {
+			result = append(result, model.ShortenModel{
+				ID:          k,
+				OriginURL:   v.OriginURL,
+				UserID:      userID,
+				DeletedFlag: v.DeletedFlag,
 			})
 		}
 	}

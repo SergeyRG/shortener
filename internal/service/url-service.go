@@ -26,7 +26,7 @@ func NewURLService(r URLRepository, cfg config.Config, idGenerator ShortURLIDGen
 	}
 }
 
-func (u *URLService) GetOriginalURLByID(ctx context.Context, id string) ([]string, error) {
+func (u *URLService) GetOriginalURLByID(ctx context.Context, id string) (model.ShortenModel, error) {
 	return u.repo.GetByID(ctx, id)
 }
 
@@ -73,7 +73,7 @@ func (u *URLService) AddShortURL(ctx context.Context, url string, userID string)
 		//Если такой id уже есть в памяти и url совпадает, то возвращаем этот id
 		//Если url не совпадает, то добавляем соль и пересчитываем id
 		case repository.ErrAlreadyExist:
-			if v, _ := u.repo.GetByID(ctx, id); v[0] == url {
+			if v, _ := u.repo.GetByID(ctx, id); v.OriginURL == url {
 				return id, fmt.Errorf("%w", ErrConflict)
 			}
 			addition += "1"

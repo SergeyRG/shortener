@@ -13,6 +13,7 @@ import (
 	"github.com/SergeyRG/shortener/internal/handler"
 	"github.com/SergeyRG/shortener/internal/logging"
 	"github.com/SergeyRG/shortener/internal/middleware"
+	"github.com/SergeyRG/shortener/internal/model"
 	"github.com/SergeyRG/shortener/internal/repository"
 	"github.com/SergeyRG/shortener/internal/service"
 	"github.com/SergeyRG/shortener/migrations"
@@ -50,11 +51,11 @@ func run() error {
 		defer fileStore.Close()
 
 		decoder := json.NewDecoder(fileStore)
-		stor := make(map[string][]string)
+		stor := make(map[string]model.ShortenModel)
 		for decoder.More() {
 			if err := decoder.Decode(&stor); err != nil {
 				logging.Logger.Error("Ошибка восстановления сохраненных URL", zap.Error(err))
-				stor = make(map[string][]string)
+				stor = make(map[string]model.ShortenModel)
 				break
 			}
 		}

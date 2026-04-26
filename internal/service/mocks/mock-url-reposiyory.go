@@ -84,10 +84,10 @@ func (mr *MockURLRepositoryMockRecorder) Delete(ctx, id any) *gomock.Call {
 }
 
 // GetByID mocks base method.
-func (m *MockURLRepository) GetByID(ctx context.Context, id string) ([]string, error) {
+func (m *MockURLRepository) GetByID(ctx context.Context, id string) (model.ShortenModel, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetByID", ctx, id)
-	ret0, _ := ret[0].([]string)
+	ret0, _ := ret[0].(model.ShortenModel)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -99,10 +99,10 @@ func (mr *MockURLRepositoryMockRecorder) GetByID(ctx, id any) *gomock.Call {
 }
 
 // GetByUserID mocks base method.
-func (m *MockURLRepository) GetByUserID(ctx context.Context, userID string) ([]model.ShortenData, error) {
+func (m *MockURLRepository) GetByUserID(ctx context.Context, userID string) ([]model.ShortenModel, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetByUserID", ctx, userID)
-	ret0, _ := ret[0].([]model.ShortenData)
+	ret0, _ := ret[0].([]model.ShortenModel)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

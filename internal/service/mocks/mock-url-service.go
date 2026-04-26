@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	model "github.com/SergeyRG/shortener/internal/model"
 	service "github.com/SergeyRG/shortener/internal/service"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -72,10 +73,10 @@ func (mr *MockURLServiceInterfaceMockRecorder) AddShortURL(ctx, url, userID any)
 }
 
 // GetOriginalURLByID mocks base method.
-func (m *MockURLServiceInterface) GetOriginalURLByID(ctx context.Context, id string) ([]string, error) {
+func (m *MockURLServiceInterface) GetOriginalURLByID(ctx context.Context, id string) (model.ShortenModel, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetOriginalURLByID", ctx, id)
-	ret0, _ := ret[0].([]string)
+	ret0, _ := ret[0].(model.ShortenModel)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
