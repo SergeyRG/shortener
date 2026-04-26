@@ -13,8 +13,8 @@ type BatchDataResponse struct {
 }
 
 type UserURLData struct {
-	ShortUrl    string `json:"short_url"`
-	OriginalUrl string `json:"original_url"`
+	ShortURL    string `json:"short_url"`
+	OriginalURL string `json:"original_url"`
 }
 
 //go:generate mockgen -destination=mocks/mock-url-service.go -package=mocks . URLServiceInterface

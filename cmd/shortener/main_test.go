@@ -11,8 +11,11 @@ import (
 
 	"github.com/SergeyRG/shortener/internal/config"
 	"github.com/SergeyRG/shortener/internal/handler"
+	"github.com/SergeyRG/shortener/internal/logging"
+	"github.com/SergeyRG/shortener/internal/middleware"
 	"github.com/SergeyRG/shortener/internal/repository"
 	"github.com/SergeyRG/shortener/internal/service"
+	"go.uber.org/zap/zaptest"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-resty/resty/v2"
@@ -20,16 +23,19 @@ import (
 )
 
 func Test_rootHandler(t *testing.T) {
+	logging.Logger = zaptest.NewLogger(t)
+
 	tmpFile, _ := os.CreateTemp("", "test_*.tmp")
 	tmpFile.Close()
 	repo := repository.NewInMemoryRepositoryURL(nil, tmpFile.Name())
 	cfg := config.Config{
 		ServerAddress:       ":8080",
 		BaseShortURLAddress: "http://localhost:8080",
+		SecretKey:           "test",
 	}
 	g := service.URLGenerator{}
 	svc := service.NewURLService(repo, cfg, g)
-	h := http.HandlerFunc(handler.RootHandler(svc))
+	h := http.HandlerFunc(middleware.Auth(handler.RootHandler(svc), cfg))
 	srv := httptest.NewServer(h)
 
 	defer srv.Close()

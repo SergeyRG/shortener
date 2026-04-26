@@ -24,21 +24,21 @@ func TestURLService_GetOriginalURLByID(t *testing.T) {
 		name    string
 		cfg     config.Config
 		id      string
-		want    string
+		want    []string
 		wantErr error
 	}{
 		{
 			name:    "check that the value received from the repository is being returned",
 			cfg:     cfg,
 			id:      "DFSDFDD",
-			want:    "http://test.ru",
+			want:    []string{"http://test.ru", "test"},
 			wantErr: nil,
 		},
 		{
 			name:    "check that an error is returned if an error has occurred in the repository",
 			cfg:     cfg,
 			id:      "DFSDFDD",
-			want:    "http://test.ru",
+			want:    []string{"http://test.ru", "test"},
 			wantErr: errors.New("test"),
 		},
 	}
@@ -171,7 +171,7 @@ func TestURLService_AddShortURL(t *testing.T) {
 				Times(tt.attempts).Return(tt.wantShortURL)
 
 			mr.EXPECT().Add(context.Background(), tt.url, tt.wantShortURL, "test").Times(tt.attempts).Return(tt.repoErr)
-			mr.EXPECT().GetByID(gomock.Any(), gomock.Any()).AnyTimes().Return("test", nil)
+			mr.EXPECT().GetByID(gomock.Any(), gomock.Any()).AnyTimes().Return([]string{"test", "test"}, nil)
 
 			u := service.NewURLService(mr, tt.cfg, mg)
 

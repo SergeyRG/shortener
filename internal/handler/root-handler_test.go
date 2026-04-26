@@ -1,20 +1,25 @@
 package handler_test
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/SergeyRG/shortener/internal/contextutils"
 	"github.com/SergeyRG/shortener/internal/handler"
+	"github.com/SergeyRG/shortener/internal/logging"
 	"github.com/SergeyRG/shortener/internal/service/mocks"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
+	"go.uber.org/zap/zaptest"
 )
 
 func TestRootHandler(t *testing.T) {
+	logging.Logger = zaptest.NewLogger(t)
 	tests := []struct {
 		name            string
 		inURL           string
@@ -59,6 +64,7 @@ func TestRootHandler(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.inURL))
 			req.Header.Set("Content-Type", tt.contentType)
+			req = req.WithContext(context.WithValue(context.Background(), contextutils.UserIDKey, "test"))
 			rw := httptest.NewRecorder()
 
 			rootHandler := handler.RootHandler(m)

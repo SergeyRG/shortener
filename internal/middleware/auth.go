@@ -9,11 +9,12 @@ import (
 	"net/http"
 
 	"github.com/SergeyRG/shortener/internal/config"
+	"github.com/SergeyRG/shortener/internal/contextutils"
 	"github.com/golang-jwt/jwt/v4"
 )
 
-var ErrUnexpectedSigningMethod = fmt.Errorf("unexpected signing method:")
-var ErrTokenIsNotValid = fmt.Errorf("Token is not valid")
+var ErrUnexpectedSigningMethod = fmt.Errorf("unexpected signing method")
+var ErrTokenIsNotValid = fmt.Errorf("token is not valid")
 
 type Claims struct {
 	jwt.RegisteredClaims
@@ -30,26 +31,26 @@ func generateUserID() (userID string, err error) {
 	return
 }
 
-func generateJWTAuthToken(userID string, SECRET_KEY []byte) (string, error) {
+func generateJWTAuthToken(userID string, secretKey []byte) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
 		UserID: userID,
 	})
 
-	tokenString, err := token.SignedString(SECRET_KEY)
+	tokenString, err := token.SignedString(secretKey)
 	if err != nil {
 		return "", err
 	}
 	return tokenString, nil
 }
 
-func validateAndParseJWTAuthToken(tokenString string, SECRET_KEY []byte) (string, error) {
+func validateAndParseJWTAuthToken(tokenString string, secretKey []byte) (string, error) {
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims,
 		func(t *jwt.Token) (interface{}, error) {
 			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("%w: %v", ErrUnexpectedSigningMethod, t.Header["alg"])
 			}
-			return []byte(SECRET_KEY), nil
+			return []byte(secretKey), nil
 		})
 	if err != nil {
 		return "", err
@@ -87,6 +88,10 @@ func Auth(h http.HandlerFunc, cfg config.Config) http.HandlerFunc {
 
 		if newTokenRequired {
 			userID, err = generateUserID()
+			if err != nil {
+				rw.WriteHeader(http.StatusInternalServerError)
+				return
+			}
 			tokenString, err = generateJWTAuthToken(userID, []byte(cfg.SecretKey))
 			if err != nil {
 				rw.WriteHeader(http.StatusInternalServerError)
@@ -105,7 +110,7 @@ func Auth(h http.HandlerFunc, cfg config.Config) http.HandlerFunc {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), "userID", userID)
+		ctx := context.WithValue(r.Context(), contextutils.UserIDKey, userID)
 		h.ServeHTTP(rw, r.WithContext(ctx))
 	}
 }

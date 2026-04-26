@@ -40,11 +40,11 @@ func (u *URLService) GetURLByUserID(ctx context.Context, userID string) ([]UserU
 
 	for _, url := range userURL {
 		data := UserURLData{}
-		data.ShortUrl, err = u.MakeShortURLByID(ctx, url.ID)
+		data.ShortURL, err = u.MakeShortURLByID(ctx, url.ID)
 		if err != nil {
 			return nil, err
 		}
-		data.OriginalUrl = url.OriginURL
+		data.OriginalURL = url.OriginURL
 
 		result = append(result, data)
 	}

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/SergeyRG/shortener/internal/contextutils"
 	"github.com/SergeyRG/shortener/internal/logging"
 	"github.com/SergeyRG/shortener/internal/service"
 	"go.uber.org/zap"
@@ -13,7 +14,12 @@ import (
 
 func JSONShortenHandler(svc service.URLServiceInterface) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		userID := req.Context().Value("userID").(string)
+		userID, ok := contextutils.UserIDFromContext(req.Context())
+		if !ok {
+			logging.Logger.Error("cant get user id")
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
 		decoder := json.NewDecoder(req.Body)
 		defer req.Body.Close()

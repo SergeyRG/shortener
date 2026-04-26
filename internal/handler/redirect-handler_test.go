@@ -18,14 +18,14 @@ func TestRedirectHandler(t *testing.T) {
 	tests := []struct {
 		name         string
 		inID         string
-		outURL       string
+		outURL       []string
 		wantLocation string
 		wantErr      error
 	}{
 		{"test the return of the redirect", "NMGHFDBG",
-			"http:/test.ru", "http:/test.ru", nil},
+			[]string{"http:/test.ru", "test"}, "http:/test.ru", nil},
 		{"test the return of the error on non existen id", "NMGHFDBG",
-			"http:/test.ru", "", repository.ErrAlreadyExist},
+			[]string{"http:/test.ru", "test"}, "", repository.ErrAlreadyExist},
 	}
 
 	for _, tt := range tests {

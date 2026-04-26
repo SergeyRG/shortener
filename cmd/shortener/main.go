@@ -114,7 +114,7 @@ func initRouter(svc service.URLServiceInterface, db *sql.DB, cfg config.Config) 
 		middleware.Auth(middleware.GzipMiddleware((handler.DBPingHandler(db))), cfg))
 	BatchAddHandler := logging.WithLogging(
 		middleware.Auth(middleware.GzipMiddleware((handler.BatchAddHandler(svc))), cfg))
-	UserUrlHandler := logging.WithLogging(
+	UserURLHandler := logging.WithLogging(
 		middleware.Auth(middleware.GzipMiddleware((handler.UserURLHandler(svc))), cfg))
 
 	r := chi.NewRouter()
@@ -126,7 +126,7 @@ func initRouter(svc service.URLServiceInterface, db *sql.DB, cfg config.Config) 
 		r.Get("/ping/", DBPingHandler)
 		r.Post("/api/shorten", JSONShortenHandler)
 		r.Post("/api/shorten/batch", BatchAddHandler)
-		r.Get("/api/user/urls", UserUrlHandler)
+		r.Get("/api/user/urls", UserURLHandler)
 	})
 	return r
 }
