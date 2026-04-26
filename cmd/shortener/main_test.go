@@ -83,7 +83,7 @@ func Test_redirectHandler(t *testing.T) {
 	tmpFile, _ := os.CreateTemp("", "test_*.tmp")
 	tmpFile.Close()
 	repo := repository.NewInMemoryRepositoryURL(nil, tmpFile.Name())
-	repo.Add(context.Background(), "http://ya.ru", "HGHQZJH6")
+	repo.Add(context.Background(), "http://ya.ru", "HGHQZJH6", "test")
 	cfg := config.Config{
 		ServerAddress:       ":8080",
 		BaseShortURLAddress: "http://localhost:8080",

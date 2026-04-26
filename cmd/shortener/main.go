@@ -50,11 +50,11 @@ func run() error {
 		defer fileStore.Close()
 
 		decoder := json.NewDecoder(fileStore)
-		stor := make(map[string]string)
+		stor := make(map[string][]string)
 		for decoder.More() {
 			if err := decoder.Decode(&stor); err != nil {
 				logging.Logger.Error("Ошибка восстановления сохраненных URL", zap.Error(err))
-				stor = make(map[string]string)
+				stor = make(map[string][]string)
 				break
 			}
 		}
@@ -88,22 +88,7 @@ func run() error {
 	g := service.URLGenerator{}
 	svc := service.NewURLService(repo, cfg, g)
 
-	rootHandler := logging.WithLogging(middleware.GzipMiddleware(handler.RootHandler(svc)))
-	redirectHandler := logging.WithLogging(middleware.GzipMiddleware(handler.RedirectHandler(svc)))
-	JSONShortenHandler := logging.WithLogging(middleware.GzipMiddleware((handler.JSONShortenHandler(svc))))
-	DBPingHandler := logging.WithLogging(middleware.GzipMiddleware((handler.DBPingHandler(db))))
-	BatchAddHandler := logging.WithLogging(middleware.GzipMiddleware((handler.BatchAddHandler(svc))))
-
-	r := chi.NewRouter()
-	r.Route("/", func(r chi.Router) {
-		r.Post("/", rootHandler)
-		r.Get("/{id}", redirectHandler)
-		r.Get("/{id}/", redirectHandler)
-		r.Get("/ping", DBPingHandler)
-		r.Get("/ping/", DBPingHandler)
-		r.Post("/api/shorten", JSONShortenHandler)
-		r.Post("/api/shorten/batch", BatchAddHandler)
-	})
+	r := initRouter(svc, db, cfg)
 	logger.Info("запуск приложения")
 
 	server := &http.Server{
@@ -116,4 +101,32 @@ func run() error {
 	}
 
 	return server.ListenAndServe()
+}
+
+func initRouter(svc service.URLServiceInterface, db *sql.DB, cfg config.Config) chi.Router {
+	rootHandler := logging.WithLogging(
+		middleware.Auth(middleware.GzipMiddleware(handler.RootHandler(svc)), cfg))
+	redirectHandler := logging.WithLogging(
+		middleware.Auth(middleware.GzipMiddleware(handler.RedirectHandler(svc)), cfg))
+	JSONShortenHandler := logging.WithLogging(
+		middleware.Auth(middleware.GzipMiddleware((handler.JSONShortenHandler(svc))), cfg))
+	DBPingHandler := logging.WithLogging(
+		middleware.Auth(middleware.GzipMiddleware((handler.DBPingHandler(db))), cfg))
+	BatchAddHandler := logging.WithLogging(
+		middleware.Auth(middleware.GzipMiddleware((handler.BatchAddHandler(svc))), cfg))
+	UserUrlHandler := logging.WithLogging(
+		middleware.Auth(middleware.GzipMiddleware((handler.UserURLHandler(svc))), cfg))
+
+	r := chi.NewRouter()
+	r.Route("/", func(r chi.Router) {
+		r.Post("/", rootHandler)
+		r.Get("/{id}", redirectHandler)
+		r.Get("/{id}/", redirectHandler)
+		r.Get("/ping", DBPingHandler)
+		r.Get("/ping/", DBPingHandler)
+		r.Post("/api/shorten", JSONShortenHandler)
+		r.Post("/api/shorten/batch", BatchAddHandler)
+		r.Get("/api/user/urls", UserUrlHandler)
+	})
+	return r
 }

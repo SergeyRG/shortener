@@ -26,8 +26,30 @@ func NewURLService(r URLRepository, cfg config.Config, idGenerator ShortURLIDGen
 	}
 }
 
-func (u *URLService) GetOriginalURLByID(ctx context.Context, id string) (string, error) {
+func (u *URLService) GetOriginalURLByID(ctx context.Context, id string) ([]string, error) {
 	return u.repo.GetByID(ctx, id)
+}
+
+func (u *URLService) GetURLByUserID(ctx context.Context, userID string) ([]UserURLData, error) {
+	userURL, err := u.repo.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	var result []UserURLData
+
+	for _, url := range userURL {
+		data := UserURLData{}
+		data.ShortUrl, err = u.MakeShortURLByID(ctx, url.ID)
+		if err != nil {
+			return nil, err
+		}
+		data.OriginalUrl = url.OriginURL
+
+		result = append(result, data)
+	}
+
+	return result, nil
 }
 
 func (u *URLService) MakeShortURLByID(ctx context.Context, id string) (string, error) {
@@ -38,12 +60,12 @@ func (u *URLService) MakeShortURLByID(ctx context.Context, id string) (string, e
 	return res, nil
 }
 
-func (u *URLService) AddShortURL(ctx context.Context, url string) (string, error) {
+func (u *URLService) AddShortURL(ctx context.Context, url string, userID string) (string, error) {
 	var addition = ""
 	var id = ""
 	for iter := 1; iter <= 10; iter++ {
 		id = u.idGenerator.CalculateShortURLID(url + addition)
-		err := u.repo.Add(ctx, url, id)
+		err := u.repo.Add(ctx, url, id, userID)
 
 		switch err {
 		case nil:
@@ -51,7 +73,7 @@ func (u *URLService) AddShortURL(ctx context.Context, url string) (string, error
 		//Если такой id уже есть в памяти и url совпадает, то возвращаем этот id
 		//Если url не совпадает, то добавляем соль и пересчитываем id
 		case repository.ErrAlreadyExist:
-			if v, _ := u.repo.GetByID(ctx, id); v == url {
+			if v, _ := u.repo.GetByID(ctx, id); v[0] == url {
 				return id, fmt.Errorf("%w", ErrConflict)
 			}
 			addition += "1"
@@ -62,7 +84,7 @@ func (u *URLService) AddShortURL(ctx context.Context, url string) (string, error
 	return "", repository.ErrNotEnoughID
 }
 
-func (u *URLService) AddBatch(ctx context.Context, data []BatchDataRequest) ([]BatchDataResponse, error) {
+func (u *URLService) AddBatch(ctx context.Context, data []BatchDataRequest, userID string) ([]BatchDataResponse, error) {
 	shortURLs := make([]model.ShortenData, len(data))
 	response := make([]BatchDataResponse, len(data))
 	for i, v := range data {
@@ -80,7 +102,7 @@ func (u *URLService) AddBatch(ctx context.Context, data []BatchDataRequest) ([]B
 			ShortURL:      shortURL,
 		}
 	}
-	err := u.repo.AddBatch(ctx, shortURLs)
+	err := u.repo.AddBatch(ctx, shortURLs, userID)
 	if err != nil {
 		return nil, err
 	}

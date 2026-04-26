@@ -170,12 +170,12 @@ func TestURLService_AddShortURL(t *testing.T) {
 				gomock.Cond(func(x any) bool { return strings.Contains(x.(string), tt.url) })).
 				Times(tt.attempts).Return(tt.wantShortURL)
 
-			mr.EXPECT().Add(context.Background(), tt.url, tt.wantShortURL).Times(tt.attempts).Return(tt.repoErr)
+			mr.EXPECT().Add(context.Background(), tt.url, tt.wantShortURL, "test").Times(tt.attempts).Return(tt.repoErr)
 			mr.EXPECT().GetByID(gomock.Any(), gomock.Any()).AnyTimes().Return("test", nil)
 
 			u := service.NewURLService(mr, tt.cfg, mg)
 
-			got, gotErr := u.AddShortURL(context.Background(), tt.url)
+			got, gotErr := u.AddShortURL(context.Background(), tt.url, "test")
 			if tt.wantErr != nil {
 				assert.Equal(t, tt.wantErr, gotErr)
 			} else {

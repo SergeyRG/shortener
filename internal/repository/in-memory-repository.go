@@ -10,11 +10,11 @@ import (
 )
 
 type InMemoryRepositoryURL struct {
-	stor     map[string]string
+	stor     map[string][]string
 	filePath string
 }
 
-func NewInMemoryRepositoryURL(data map[string]string, filePath string) *InMemoryRepositoryURL {
+func NewInMemoryRepositoryURL(data map[string][]string, filePath string) *InMemoryRepositoryURL {
 	if data != nil {
 		return &InMemoryRepositoryURL{
 			stor:     data,
@@ -22,12 +22,12 @@ func NewInMemoryRepositoryURL(data map[string]string, filePath string) *InMemory
 		}
 	}
 	return &InMemoryRepositoryURL{
-		stor:     make(map[string]string),
+		stor:     make(map[string][]string),
 		filePath: filePath,
 	}
 }
 
-func (r *InMemoryRepositoryURL) Add(ctx context.Context, url string, id string) error {
+func (r *InMemoryRepositoryURL) Add(ctx context.Context, url string, id string, userID string) error {
 	if _, ok := r.stor[id]; ok {
 		return ErrAlreadyExist
 	}
@@ -37,7 +37,7 @@ func (r *InMemoryRepositoryURL) Add(ctx context.Context, url string, id string) 
 	}
 	defer file.Close()
 
-	entry := map[string]string{id: url}
+	entry := map[string][]string{id: {url, userID}}
 
 	data, err := json.Marshal(entry)
 	if err != nil {
@@ -48,17 +48,30 @@ func (r *InMemoryRepositoryURL) Add(ctx context.Context, url string, id string) 
 	if err != nil {
 		return err
 	}
-	r.stor[id] = url
+	r.stor[id] = []string{url, userID}
 	return nil
 }
 
-func (r *InMemoryRepositoryURL) GetByID(ctx context.Context, id string) (string, error) {
+func (r *InMemoryRepositoryURL) GetByID(ctx context.Context, id string) ([]string, error) {
 	if v, ok := r.stor[id]; ok {
 		return v, nil
 	} else {
-		return "", ErrURLNotFound
+		return nil, ErrURLNotFound
+	}
+}
+
+func (r *InMemoryRepositoryURL) GetByUserID(ctx context.Context, userID string) (url []model.ShortenData, err error) {
+	var result []model.ShortenData
+	for k, v := range r.stor {
+		if v[1] == userID {
+			result = append(result, model.ShortenData{
+				ID:        k,
+				OriginURL: v[0],
+			})
+		}
 	}
 
+	return result, nil
 }
 
 func (r *InMemoryRepositoryURL) Delete(ctx context.Context, id string) error {
@@ -66,9 +79,9 @@ func (r *InMemoryRepositoryURL) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-func (r *InMemoryRepositoryURL) AddBatch(ctx context.Context, data []model.ShortenData) error {
+func (r *InMemoryRepositoryURL) AddBatch(ctx context.Context, data []model.ShortenData, userID string) error {
 	for _, v := range data {
-		err := r.Add(ctx, v.OriginURL, v.ID)
+		err := r.Add(ctx, v.OriginURL, v.ID, userID)
 		if err != nil {
 			return fmt.Errorf("ошибка добавления сокращенного URL для %s:%w", v.OriginURL, err)
 		}

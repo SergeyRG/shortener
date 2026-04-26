@@ -16,7 +16,7 @@ func RedirectHandler(svc service.URLServiceInterface) http.HandlerFunc {
 			return
 		}
 
-		rw.Header().Set("Location", url)
+		rw.Header().Set("Location", url[0])
 		rw.WriteHeader(http.StatusTemporaryRedirect)
 	}
 }
