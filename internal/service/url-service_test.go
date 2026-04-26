@@ -1,12 +1,13 @@
 package service_test
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/SergeyRG/shortener/internal/config"
-	urlErrors "github.com/SergeyRG/shortener/internal/errors"
 	"github.com/SergeyRG/shortener/internal/repository"
 	"github.com/SergeyRG/shortener/internal/service"
 	"github.com/SergeyRG/shortener/internal/service/mocks"
@@ -47,14 +48,13 @@ func TestURLService_GetOriginalURLByID(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := mocks.NewMockURLRepository(ctrl)
-			mockPS := mocks.NewMockURLRepository(ctrl)
 
-			m.EXPECT().GetByID(tt.id).Times(1).Return(tt.want, tt.wantErr)
+			m.EXPECT().GetByID(context.Background(), tt.id).Times(1).Return(tt.want, tt.wantErr)
 
 			g := service.URLGenerator{}
-			us := service.NewURLService(m, mockPS, tt.cfg, g)
+			us := service.NewURLService(m, tt.cfg, g)
 
-			got, gotErr := us.GetOriginalURLByID(tt.id)
+			got, gotErr := us.GetOriginalURLByID(context.Background(), tt.id)
 
 			if tt.wantErr != nil {
 				assert.NotNil(t, gotErr)
@@ -101,11 +101,10 @@ func TestURLService_MakeShortURLByID(t *testing.T) {
 			defer ctrl.Finish()
 
 			m := mocks.NewMockURLRepository(ctrl)
-			mockPS := mocks.NewMockURLRepository(ctrl)
 			g := service.URLGenerator{}
-			us := service.NewURLService(m, mockPS, tt.cfg, g)
+			us := service.NewURLService(m, tt.cfg, g)
 
-			got, gotErr := us.MakeShortURLByID(tt.id)
+			got, gotErr := us.MakeShortURLByID(context.Background(), tt.id)
 
 			if tt.wantErr != nil {
 				assert.NotNil(t, gotErr)
@@ -145,18 +144,18 @@ func TestURLService_AddShortURL(t *testing.T) {
 			cfg:          cfg,
 			url:          "http://test.ru",
 			attempts:     1,
-			repoErr:      urlErrors.ErrUnexpected,
+			repoErr:      fmt.Errorf("Тестовая ошибка"),
 			wantShortURL: "DSDFDSDF",
-			wantErr:      urlErrors.ErrUnexpected,
+			wantErr:      fmt.Errorf("%w:%w", repository.ErrUnexpected, fmt.Errorf("Тестовая ошибка")),
 		},
 		{
 			name:         "3",
 			cfg:          cfg,
 			url:          "http://test.ru",
 			attempts:     10,
-			repoErr:      urlErrors.ErrAlredyExist,
+			repoErr:      repository.ErrAlreadyExist,
 			wantShortURL: "DSDFDSDF",
-			wantErr:      urlErrors.ErrNotEnoughID,
+			wantErr:      repository.ErrNotEnoughID,
 		},
 	}
 	for _, tt := range tests {
@@ -166,18 +165,17 @@ func TestURLService_AddShortURL(t *testing.T) {
 
 			mg := mocks.NewMockShortURLIDGenerator(ctrl)
 			mr := mocks.NewMockURLRepository(ctrl)
-			mockPS := repository.NewInMemoryRepositoryURL(nil)
 
 			mg.EXPECT().CalculateShortURLID(
 				gomock.Cond(func(x any) bool { return strings.Contains(x.(string), tt.url) })).
 				Times(tt.attempts).Return(tt.wantShortURL)
 
-			mr.EXPECT().Add(tt.url, tt.wantShortURL).Times(tt.attempts).Return(tt.repoErr)
-			mr.EXPECT().GetByID(gomock.Any()).AnyTimes().Return("test", nil)
+			mr.EXPECT().Add(context.Background(), tt.url, tt.wantShortURL).Times(tt.attempts).Return(tt.repoErr)
+			mr.EXPECT().GetByID(gomock.Any(), gomock.Any()).AnyTimes().Return("test", nil)
 
-			u := service.NewURLService(mr, mockPS, tt.cfg, mg)
+			u := service.NewURLService(mr, tt.cfg, mg)
 
-			got, gotErr := u.AddShortURL(tt.url)
+			got, gotErr := u.AddShortURL(context.Background(), tt.url)
 			if tt.wantErr != nil {
 				assert.Equal(t, tt.wantErr, gotErr)
 			} else {

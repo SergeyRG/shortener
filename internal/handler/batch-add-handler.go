@@ -1,9 +1,7 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 
 	"github.com/SergeyRG/shortener/internal/logging"
@@ -11,15 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type request struct {
-	URL string `json:"url"`
-}
-
-type response struct {
-	Result string `json:"result"`
-}
-
-func JSONShortenHandler(svc service.URLServiceInterface) http.HandlerFunc {
+func BatchAddHandler(svc service.URLServiceInterface) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 
 		decoder := json.NewDecoder(req.Body)
@@ -27,43 +17,27 @@ func JSONShortenHandler(svc service.URLServiceInterface) http.HandlerFunc {
 
 		logging.Logger.Debug("start decoding json request")
 
-		jr := &request{}
-		if err := decoder.Decode(jr); err != nil {
+		jr := []service.BatchDataRequest{}
+		if err := decoder.Decode(&jr); err != nil {
 			logging.Logger.Error("cant decode json request", zap.Error(err))
 			rw.WriteHeader(http.StatusBadRequest)
 			return
 		}
 		logging.Logger.Debug("json request is decoded")
 
-		ID, err := svc.AddShortURL(context.Background(), jr.URL)
-		if err != nil && !errors.Is(err, service.ErrConflict) {
+		batchResp, err := svc.AddBatch(req.Context(), jr)
+		if err != nil {
 			logging.Logger.Error("cant add short URL", zap.Error(err))
 			rw.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		status := http.StatusCreated
-		if errors.Is(err, service.ErrConflict) {
-			status = http.StatusConflict
-		}
-
-		shortURL, err := svc.MakeShortURLByID(context.Background(), ID)
-		if err != nil {
-			logging.Logger.Error("cant make short URL", zap.Error(err))
-			rw.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		r := response{
-			Result: shortURL,
-		}
-
 		encoder := json.NewEncoder(rw)
 
 		rw.Header().Set("Content-Type", "application/json")
-		rw.WriteHeader(status)
+		rw.WriteHeader(http.StatusCreated)
 		logging.Logger.Debug("encoding response and sending")
-		err = encoder.Encode(r)
+		err = encoder.Encode(batchResp)
 		if err != nil {
 			logging.Logger.Debug("error encoding response", zap.Error(err))
 			return

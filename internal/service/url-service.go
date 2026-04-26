@@ -1,40 +1,36 @@
 package service
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/base32"
 	"fmt"
 	"net/url"
 
 	"github.com/SergeyRG/shortener/internal/config"
-	urlErrors "github.com/SergeyRG/shortener/internal/errors"
+	"github.com/SergeyRG/shortener/internal/model"
+	"github.com/SergeyRG/shortener/internal/repository"
 )
 
 type URLService struct {
-	repo           URLRepository
-	persistentStor URLRepository
-	cfg            config.Config
-	idGenerator    ShortURLIDGenerator
+	repo        URLRepository
+	cfg         config.Config
+	idGenerator ShortURLIDGenerator
 }
 
-func NewURLService(r URLRepository, ps URLRepository, cfg config.Config, idGenerator ShortURLIDGenerator) *URLService {
+func NewURLService(r URLRepository, cfg config.Config, idGenerator ShortURLIDGenerator) *URLService {
 	return &URLService{
-		repo:           r,
-		persistentStor: ps,
-		cfg:            cfg,
-		idGenerator:    idGenerator,
+		repo:        r,
+		cfg:         cfg,
+		idGenerator: idGenerator,
 	}
 }
 
-func (u *URLService) GetOriginalURLByID(id string) (string, error) {
-	if v, err := u.repo.GetByID(id); err != nil {
-		return "", err
-	} else {
-		return v, nil
-	}
+func (u *URLService) GetOriginalURLByID(ctx context.Context, id string) (string, error) {
+	return u.repo.GetByID(ctx, id)
 }
 
-func (u *URLService) MakeShortURLByID(id string) (string, error) {
+func (u *URLService) MakeShortURLByID(ctx context.Context, id string) (string, error) {
 	res, err := url.JoinPath(u.cfg.BaseShortURLAddress, id)
 	if err != nil {
 		return "", err
@@ -42,38 +38,54 @@ func (u *URLService) MakeShortURLByID(id string) (string, error) {
 	return res, nil
 }
 
-func (u *URLService) AddShortURL(url string) (string, error) {
+func (u *URLService) AddShortURL(ctx context.Context, url string) (string, error) {
 	var addition = ""
 	var id = ""
-	var iter = 1
-	for {
+	for iter := 1; iter <= 10; iter++ {
 		id = u.idGenerator.CalculateShortURLID(url + addition)
-		err := u.repo.Add(url, id)
+		err := u.repo.Add(ctx, url, id)
 
-		if err == nil {
-			err = u.persistentStor.Add(url, id)
-			if err != nil {
-				u.repo.Delete(id)
-				return "", fmt.Errorf("ошибка сохранения в постоянное хранилище")
+		switch err {
+		case nil:
+			return id, nil
+		//Если такой id уже есть в памяти и url совпадает, то возвращаем этот id
+		//Если url не совпадает, то добавляем соль и пересчитываем id
+		case repository.ErrAlreadyExist:
+			if v, _ := u.repo.GetByID(ctx, id); v == url {
+				return id, fmt.Errorf("%w", ErrConflict)
 			}
-			return id, nil
-		}
-
-		if err != urlErrors.ErrAlredyExist {
-			return "", urlErrors.ErrUnexpected
-		}
-
-		if v, _ := u.repo.GetByID(id); v == url {
-			return id, nil
-		}
-
-		addition += "1"
-		iter += 1
-
-		if iter == 11 {
-			return "", urlErrors.ErrNotEnoughID
+			addition += "1"
+		default:
+			return "", fmt.Errorf("%w:%w", repository.ErrUnexpected, err)
 		}
 	}
+	return "", repository.ErrNotEnoughID
+}
+
+func (u *URLService) AddBatch(ctx context.Context, data []BatchDataRequest) ([]BatchDataResponse, error) {
+	shortURLs := make([]model.ShortenData, len(data))
+	response := make([]BatchDataResponse, len(data))
+	for i, v := range data {
+		shortURLID := u.idGenerator.CalculateShortURLID(v.OriginalURL)
+		shortURL, err := u.MakeShortURLByID(ctx, shortURLID)
+		if err != nil {
+			return nil, err
+		}
+		shortURLs[i] = model.ShortenData{
+			ID:        shortURLID,
+			OriginURL: v.OriginalURL,
+		}
+		response[i] = BatchDataResponse{
+			CorrelationID: v.CorrelationID,
+			ShortURL:      shortURL,
+		}
+	}
+	err := u.repo.AddBatch(ctx, shortURLs)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
 }
 
 type URLGenerator struct{}
@@ -81,5 +93,4 @@ type URLGenerator struct{}
 func (ug URLGenerator) CalculateShortURLID(url string) string {
 	var hash = sha256.Sum256([]byte(url))
 	return string([]byte(base32.StdEncoding.EncodeToString(hash[:]))[:8])
-
 }
