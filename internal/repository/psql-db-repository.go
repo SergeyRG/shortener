@@ -79,14 +79,14 @@ func (r *PSQLDBRepositoryURL) Delete(ctx context.Context, id string) error {
 }
 
 func (r *PSQLDBRepositoryURL) AddBatch(ctx context.Context, data []model.ShortenData, userID string) error {
-	TX, err := r.stor.BeginTx(ctx, nil)
+	tx, err := r.stor.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
-	defer TX.Rollback()
+	defer tx.Rollback()
 
 	query := `INSERT INTO urls (id, url, user_id, deleted_flag) VALUES($1,$2,$3, false)`
-	stmt, err := TX.PrepareContext(ctx, query)
+	stmt, err := tx.PrepareContext(ctx, query)
 	if err != nil {
 		return err
 	}
@@ -98,5 +98,19 @@ func (r *PSQLDBRepositoryURL) AddBatch(ctx context.Context, data []model.Shorten
 			return sqlErr
 		}
 	}
-	return TX.Commit()
+	return tx.Commit()
+}
+
+func (r *PSQLDBRepositoryURL) DeleteBatch(data []model.DeleteTaskDto) error {
+	for _, d := range data {
+		query := `Update urls SET deleted_flag=true WHERE user_id = $1 
+          	  AND id = ANY($2) 
+              AND deleted_flag = false;`
+
+		_, err := r.stor.Exec(query, d.UserID, d.IDs)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

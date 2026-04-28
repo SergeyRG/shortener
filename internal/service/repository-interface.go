@@ -13,4 +13,5 @@ type URLRepository interface {
 	GetByUserID(ctx context.Context, userID string) (url []model.ShortenModel, err error)
 	Delete(ctx context.Context, id string) error
 	AddBatch(ctx context.Context, data []model.ShortenData, userID string) error
+	DeleteBatch(data []model.DeleteTaskDto) error
 }

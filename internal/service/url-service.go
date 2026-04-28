@@ -6,6 +6,7 @@ import (
 	"encoding/base32"
 	"fmt"
 	"net/url"
+	"time"
 
 	"github.com/SergeyRG/shortener/internal/config"
 	"github.com/SergeyRG/shortener/internal/model"
@@ -16,14 +17,18 @@ type URLService struct {
 	repo        URLRepository
 	cfg         config.Config
 	idGenerator ShortURLIDGenerator
+	deleteCh    chan model.DeleteTaskDto
 }
 
 func NewURLService(r URLRepository, cfg config.Config, idGenerator ShortURLIDGenerator) *URLService {
-	return &URLService{
+	us := &URLService{
 		repo:        r,
 		cfg:         cfg,
 		idGenerator: idGenerator,
+		deleteCh:    make(chan model.DeleteTaskDto, 1000),
 	}
+	go us.startDeleteWorker()
+	return us
 }
 
 func (u *URLService) GetOriginalURLByID(ctx context.Context, id string) (model.ShortenModel, error) {
@@ -108,6 +113,30 @@ func (u *URLService) AddBatch(ctx context.Context, data []BatchDataRequest, user
 	}
 
 	return response, nil
+}
+
+func (u *URLService) AddForDeleting(ctx context.Context, data model.DeleteTaskDto) {
+	u.deleteCh <- data
+}
+
+func (u *URLService) startDeleteWorker() {
+	ticker := time.NewTicker(time.Second * 10)
+	var buf []model.DeleteTaskDto
+
+	for {
+		select {
+		case task, ok := <-u.deleteCh:
+			if !ok {
+				return
+			}
+			buf = append(buf, task)
+		case <-ticker.C:
+			if len(buf) > 0 {
+				u.repo.DeleteBatch(buf)
+				buf = nil
+			}
+		}
+	}
 }
 
 type URLGenerator struct{}

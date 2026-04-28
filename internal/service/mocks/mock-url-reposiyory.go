@@ -83,6 +83,20 @@ func (mr *MockURLRepositoryMockRecorder) Delete(ctx, id any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockURLRepository)(nil).Delete), ctx, id)
 }
 
+// DeleteBatch mocks base method.
+func (m *MockURLRepository) DeleteBatch(data []model.DeleteTaskDto) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteBatch", data)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteBatch indicates an expected call of DeleteBatch.
+func (mr *MockURLRepositoryMockRecorder) DeleteBatch(data any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteBatch", reflect.TypeOf((*MockURLRepository)(nil).DeleteBatch), data)
+}
+
 // GetByID mocks base method.
 func (m *MockURLRepository) GetByID(ctx context.Context, id string) (model.ShortenModel, error) {
 	m.ctrl.T.Helper()

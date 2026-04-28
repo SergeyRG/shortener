@@ -51,11 +51,11 @@ func run() error {
 		defer fileStore.Close()
 
 		decoder := json.NewDecoder(fileStore)
-		stor := make(map[string]model.ShortenModel)
+		stor := make(map[string]*model.ShortenModel)
 		for decoder.More() {
 			if err := decoder.Decode(&stor); err != nil {
 				logging.Logger.Error("Ошибка восстановления сохраненных URL", zap.Error(err))
-				stor = make(map[string]model.ShortenModel)
+				stor = make(map[string]*model.ShortenModel)
 				break
 			}
 		}
@@ -117,6 +117,8 @@ func initRouter(svc service.URLServiceInterface, db *sql.DB, cfg config.Config) 
 		middleware.Auth(middleware.GzipMiddleware((handler.BatchAddHandler(svc))), cfg))
 	UserURLHandler := logging.WithLogging(
 		middleware.Auth(middleware.GzipMiddleware((handler.UserURLHandler(svc))), cfg))
+	UserBatchDeleteHandler := logging.WithLogging(
+		middleware.Auth(middleware.GzipMiddleware((handler.UserBatchDeleteHandler(svc))), cfg))
 
 	r := chi.NewRouter()
 	r.Route("/", func(r chi.Router) {
@@ -128,6 +130,7 @@ func initRouter(svc service.URLServiceInterface, db *sql.DB, cfg config.Config) 
 		r.Post("/api/shorten", JSONShortenHandler)
 		r.Post("/api/shorten/batch", BatchAddHandler)
 		r.Get("/api/user/urls", UserURLHandler)
+		r.Delete("/api/user/urls", UserBatchDeleteHandler)
 	})
 	return r
 }

@@ -28,4 +28,5 @@ type URLServiceInterface interface {
 	MakeShortURLByID(ctx context.Context, id string) (url string, err error)
 	AddBatch(ctx context.Context, data []BatchDataRequest, userID string) ([]BatchDataResponse, error)
 	GetURLByUserID(ctx context.Context, userID string) (url []UserURLData, err error)
+	AddForDeleting(ctx context.Context, data model.DeleteTaskDto)
 }

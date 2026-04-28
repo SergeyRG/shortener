@@ -57,6 +57,18 @@ func (mr *MockURLServiceInterfaceMockRecorder) AddBatch(ctx, data, userID any) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddBatch", reflect.TypeOf((*MockURLServiceInterface)(nil).AddBatch), ctx, data, userID)
 }
 
+// AddForDeleting mocks base method.
+func (m *MockURLServiceInterface) AddForDeleting(ctx context.Context, data model.DeleteTaskDto) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "AddForDeleting", ctx, data)
+}
+
+// AddForDeleting indicates an expected call of AddForDeleting.
+func (mr *MockURLServiceInterfaceMockRecorder) AddForDeleting(ctx, data any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddForDeleting", reflect.TypeOf((*MockURLServiceInterface)(nil).AddForDeleting), ctx, data)
+}
+
 // AddShortURL mocks base method.
 func (m *MockURLServiceInterface) AddShortURL(ctx context.Context, url, userID string) (string, error) {
 	m.ctrl.T.Helper()

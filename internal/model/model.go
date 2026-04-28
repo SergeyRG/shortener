@@ -11,3 +11,8 @@ type ShortenModel struct {
 	UserID      string
 	DeletedFlag bool
 }
+
+type DeleteTaskDto struct {
+	UserID string
+	IDs    []string
+}

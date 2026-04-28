@@ -5,16 +5,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/SergeyRG/shortener/internal/model"
 )
 
 type InMemoryRepositoryURL struct {
-	stor     map[string]model.ShortenModel
+	stor     map[string]*model.ShortenModel
 	filePath string
+	mutex    sync.Mutex
 }
 
-func NewInMemoryRepositoryURL(data map[string]model.ShortenModel, filePath string) *InMemoryRepositoryURL {
+func NewInMemoryRepositoryURL(data map[string]*model.ShortenModel, filePath string) *InMemoryRepositoryURL {
 	if data != nil {
 		return &InMemoryRepositoryURL{
 			stor:     data,
@@ -22,12 +24,14 @@ func NewInMemoryRepositoryURL(data map[string]model.ShortenModel, filePath strin
 		}
 	}
 	return &InMemoryRepositoryURL{
-		stor:     make(map[string]model.ShortenModel),
+		stor:     make(map[string]*model.ShortenModel),
 		filePath: filePath,
 	}
 }
 
 func (r *InMemoryRepositoryURL) Add(ctx context.Context, url string, id string, userID string) error {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 	if _, ok := r.stor[id]; ok {
 		return ErrAlreadyExist
 	}
@@ -37,7 +41,7 @@ func (r *InMemoryRepositoryURL) Add(ctx context.Context, url string, id string, 
 	}
 	defer file.Close()
 
-	entry := map[string]model.ShortenModel{id: {
+	entry := map[string]*model.ShortenModel{id: {
 		ID:          id,
 		OriginURL:   url,
 		UserID:      userID,
@@ -57,15 +61,19 @@ func (r *InMemoryRepositoryURL) Add(ctx context.Context, url string, id string, 
 }
 
 func (r *InMemoryRepositoryURL) GetByID(ctx context.Context, id string) (model.ShortenModel, error) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 	if v, ok := r.stor[id]; ok {
-		return v, nil
-	} else {
-		return model.ShortenModel{}, ErrURLNotFound
+		return *v, nil
 	}
+	return model.ShortenModel{}, ErrURLNotFound
+
 }
 
 func (r *InMemoryRepositoryURL) GetByUserID(ctx context.Context, userID string) (url []model.ShortenModel, err error) {
 	var result []model.ShortenModel
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 	for k, v := range r.stor {
 		if v.UserID == userID {
 			result = append(result, model.ShortenModel{
@@ -81,6 +89,8 @@ func (r *InMemoryRepositoryURL) GetByUserID(ctx context.Context, userID string) 
 }
 
 func (r *InMemoryRepositoryURL) Delete(ctx context.Context, id string) error {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 	delete(r.stor, id)
 	return nil
 }
@@ -90,6 +100,26 @@ func (r *InMemoryRepositoryURL) AddBatch(ctx context.Context, data []model.Short
 		err := r.Add(ctx, v.OriginURL, v.ID, userID)
 		if err != nil {
 			return fmt.Errorf("ошибка добавления сокращенного URL для %s:%w", v.OriginURL, err)
+		}
+	}
+	return nil
+}
+
+func (r *InMemoryRepositoryURL) DeleteBatch(data []model.DeleteTaskDto) error {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	file, err := os.OpenFile(r.filePath, os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	for _, task := range data {
+		for _, id := range task.IDs {
+			if r.stor[id].UserID == task.UserID {
+				r.stor[id].DeletedFlag = true
+			}
 		}
 	}
 	return nil
