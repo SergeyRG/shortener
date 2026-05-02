@@ -130,7 +130,6 @@ func (u *URLService) startDeleteWorker() {
 			if !ok {
 				if len(buf) > 0 {
 					u.repo.DeleteBatch(buf)
-					buf = buf[:0]
 				}
 				return
 			}
