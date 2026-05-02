@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/SergeyRG/shortener/internal/contextutils"
+	"github.com/SergeyRG/shortener/internal/auth"
 	"github.com/SergeyRG/shortener/internal/logging"
 	"github.com/SergeyRG/shortener/internal/service"
 	"go.uber.org/zap"
@@ -12,7 +12,7 @@ import (
 
 func BatchAddHandler(svc service.URLServiceInterface) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		userID, ok := contextutils.UserIDFromContext(req.Context())
+		userID, ok := auth.UserIDFromContext(req.Context())
 		if !ok {
 			logging.Logger.Error("cant get user id")
 			rw.WriteHeader(http.StatusInternalServerError)

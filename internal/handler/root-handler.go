@@ -6,14 +6,14 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/SergeyRG/shortener/internal/contextutils"
+	"github.com/SergeyRG/shortener/internal/auth"
 	"github.com/SergeyRG/shortener/internal/logging"
 	"github.com/SergeyRG/shortener/internal/service"
 )
 
 func RootHandler(svc service.URLServiceInterface) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
-		userID, ok := contextutils.UserIDFromContext(req.Context())
+		userID, ok := auth.UserIDFromContext(req.Context())
 		if !ok {
 			logging.Logger.Error("cant get user id")
 			rw.WriteHeader(http.StatusInternalServerError)

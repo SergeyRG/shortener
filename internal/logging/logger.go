@@ -30,7 +30,7 @@ func Initialize(level string) error {
 	return nil
 }
 
-func WithLogging(h http.HandlerFunc) http.HandlerFunc {
+func WithLogging(h http.Handler) http.Handler {
 	f := func(wr http.ResponseWriter, r *http.Request) {
 		startTime := time.Now()
 		url := r.URL

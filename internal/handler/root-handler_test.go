@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/SergeyRG/shortener/internal/contextutils"
+	"github.com/SergeyRG/shortener/internal/auth"
 	"github.com/SergeyRG/shortener/internal/handler"
 	"github.com/SergeyRG/shortener/internal/logging"
 	"github.com/SergeyRG/shortener/internal/service/mocks"
@@ -64,7 +64,7 @@ func TestRootHandler(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.inURL))
 			req.Header.Set("Content-Type", tt.contentType)
-			req = req.WithContext(context.WithValue(context.Background(), contextutils.UserIDKey, "test"))
+			req = req.WithContext(auth.ContextWithUserID(context.Background(), "test"))
 			rw := httptest.NewRecorder()
 
 			rootHandler := handler.RootHandler(m)

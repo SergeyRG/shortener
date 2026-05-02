@@ -114,3 +114,7 @@ func (r *PSQLDBRepositoryURL) DeleteBatch(data []model.DeleteTaskDto) error {
 	}
 	return nil
 }
+
+func (r *PSQLDBRepositoryURL) Close() error {
+	return r.stor.Close()
+}

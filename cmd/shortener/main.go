@@ -48,7 +48,6 @@ func run() error {
 		if err != nil {
 			logger.Fatal("не удалось открыть/создать файл", zap.Error(err))
 		}
-		defer fileStore.Close()
 
 		decoder := json.NewDecoder(fileStore)
 		stor := make(map[string]*model.ShortenModel)
@@ -65,8 +64,12 @@ func run() error {
 		} else {
 			logger.Info("Файл сохраненных URL пустой, либо произошла ошибка чтения")
 		}
-		repo = repository.NewInMemoryRepositoryURL(stor, cfg.FileStoragePath)
+		fileStore.Close()
 
+		repo, err = repository.NewInMemoryRepositoryURL(stor, cfg.FileStoragePath)
+		if err != nil {
+			logger.Fatal("не удалось создать объект репозиториия", zap.Error(err))
+		}
 	} else {
 		var err error
 		db, err = sql.Open("pgx", cfg.DBDSN)
@@ -101,27 +104,26 @@ func run() error {
 		IdleTimeout:       120 * time.Second,
 	}
 
+	defer repo.Close()
 	return server.ListenAndServe()
 }
 
 func initRouter(svc service.URLServiceInterface, db *sql.DB, cfg config.Config) chi.Router {
-	rootHandler := logging.WithLogging(
-		middleware.Auth(middleware.GzipMiddleware(handler.RootHandler(svc)), cfg))
-	redirectHandler := logging.WithLogging(
-		middleware.Auth(middleware.GzipMiddleware(handler.RedirectHandler(svc)), cfg))
-	JSONShortenHandler := logging.WithLogging(
-		middleware.Auth(middleware.GzipMiddleware((handler.JSONShortenHandler(svc))), cfg))
-	DBPingHandler := logging.WithLogging(
-		middleware.Auth(middleware.GzipMiddleware((handler.DBPingHandler(db))), cfg))
-	BatchAddHandler := logging.WithLogging(
-		middleware.Auth(middleware.GzipMiddleware((handler.BatchAddHandler(svc))), cfg))
-	UserURLHandler := logging.WithLogging(
-		middleware.Auth(middleware.GzipMiddleware((handler.UserURLHandler(svc))), cfg))
-	UserBatchDeleteHandler := logging.WithLogging(
-		middleware.Auth(middleware.GzipMiddleware((handler.UserBatchDeleteHandler(svc))), cfg))
+	rootHandler := handler.RootHandler(svc)
+	redirectHandler := handler.RedirectHandler(svc)
+	JSONShortenHandler := handler.JSONShortenHandler(svc)
+	DBPingHandler := handler.DBPingHandler(db)
+	BatchAddHandler := handler.BatchAddHandler(svc)
+	UserURLHandler := handler.UserURLHandler(svc)
+	UserBatchDeleteHandler := handler.UserBatchDeleteHandler(svc)
+
+	authMiddleware := middleware.Auth(cfg)
 
 	r := chi.NewRouter()
 	r.Route("/", func(r chi.Router) {
+		r.Use(logging.WithLogging)
+		r.Use(authMiddleware)
+		r.Use(middleware.GzipMiddleware)
 		r.Post("/", rootHandler)
 		r.Get("/{id}", redirectHandler)
 		r.Get("/{id}/", redirectHandler)

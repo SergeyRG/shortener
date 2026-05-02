@@ -27,7 +27,10 @@ func Test_rootHandler(t *testing.T) {
 
 	tmpFile, _ := os.CreateTemp("", "test_*.tmp")
 	tmpFile.Close()
-	repo := repository.NewInMemoryRepositoryURL(nil, tmpFile.Name())
+	repo, err := repository.NewInMemoryRepositoryURL(nil, tmpFile.Name())
+	if err != nil {
+		t.Fatalf("cant create repo: %v", err)
+	}
 	cfg := config.Config{
 		ServerAddress:       ":8080",
 		BaseShortURLAddress: "http://localhost:8080",
@@ -35,7 +38,8 @@ func Test_rootHandler(t *testing.T) {
 	}
 	g := service.URLGenerator{}
 	svc := service.NewURLService(repo, cfg, g)
-	h := http.HandlerFunc(middleware.Auth(handler.RootHandler(svc), cfg))
+	authMiddleware := middleware.Auth(cfg)
+	h := authMiddleware(handler.RootHandler(svc))
 	srv := httptest.NewServer(h)
 
 	defer srv.Close()
@@ -86,9 +90,15 @@ func Test_rootHandler(t *testing.T) {
 }
 
 func Test_redirectHandler(t *testing.T) {
-	tmpFile, _ := os.CreateTemp("", "test_*.tmp")
+	tmpFile, err := os.CreateTemp("", "test_*.tmp")
+	if err != nil {
+		t.Fatal("Cant create temp file")
+	}
 	tmpFile.Close()
-	repo := repository.NewInMemoryRepositoryURL(nil, tmpFile.Name())
+	repo, err := repository.NewInMemoryRepositoryURL(nil, tmpFile.Name())
+	if err != nil {
+		t.Fatalf("cant create repo: %v", err)
+	}
 	repo.Add(context.Background(), "http://ya.ru", "HGHQZJH6", "test")
 	cfg := config.Config{
 		ServerAddress:       ":8080",

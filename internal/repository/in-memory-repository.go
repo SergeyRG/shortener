@@ -13,33 +13,33 @@ import (
 type InMemoryRepositoryURL struct {
 	stor     map[string]*model.ShortenModel
 	filePath string
+	file     *os.File
 	mutex    sync.Mutex
 }
 
-func NewInMemoryRepositoryURL(data map[string]*model.ShortenModel, filePath string) *InMemoryRepositoryURL {
+func NewInMemoryRepositoryURL(data map[string]*model.ShortenModel, filePath string) (*InMemoryRepositoryURL, error) {
+	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		return nil, err
+	}
 	if data != nil {
 		return &InMemoryRepositoryURL{
 			stor:     data,
 			filePath: filePath,
-		}
+			file:     file,
+		}, nil
 	}
 	return &InMemoryRepositoryURL{
 		stor:     make(map[string]*model.ShortenModel),
 		filePath: filePath,
-	}
+		file:     file,
+	}, nil
 }
 
 func (r *InMemoryRepositoryURL) Add(ctx context.Context, url string, id string, userID string) error {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
 	if _, ok := r.stor[id]; ok {
 		return ErrAlreadyExist
 	}
-	file, err := os.OpenFile(r.filePath, os.O_WRONLY|os.O_APPEND, 0644)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
 
 	entry := map[string]*model.ShortenModel{id: {
 		ID:          id,
@@ -52,11 +52,13 @@ func (r *InMemoryRepositoryURL) Add(ctx context.Context, url string, id string, 
 		return err
 	}
 
-	_, err = file.Write(append(([]byte(data)), '\n'))
+	_, err = r.file.Write(append(([]byte(data)), '\n'))
 	if err != nil {
 		return err
 	}
+	r.mutex.Lock()
 	r.stor[id] = entry[id]
+	r.mutex.Unlock()
 	return nil
 }
 
@@ -109,12 +111,6 @@ func (r *InMemoryRepositoryURL) DeleteBatch(data []model.DeleteTaskDto) error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	file, err := os.OpenFile(r.filePath, os.O_WRONLY|os.O_TRUNC, 0644)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
 	for _, task := range data {
 		for _, id := range task.IDs {
 			if r.stor[id].UserID == task.UserID {
@@ -123,4 +119,8 @@ func (r *InMemoryRepositoryURL) DeleteBatch(data []model.DeleteTaskDto) error {
 		}
 	}
 	return nil
+}
+
+func (r *InMemoryRepositoryURL) Close() error {
+	return r.file.Close()
 }

@@ -25,7 +25,7 @@ func NewURLService(r URLRepository, cfg config.Config, idGenerator ShortURLIDGen
 		repo:        r,
 		cfg:         cfg,
 		idGenerator: idGenerator,
-		deleteCh:    make(chan model.DeleteTaskDto, 1000),
+		deleteCh:    make(chan model.DeleteTaskDto, 1),
 	}
 	go us.startDeleteWorker()
 	return us
@@ -120,20 +120,29 @@ func (u *URLService) AddForDeleting(ctx context.Context, data model.DeleteTaskDt
 }
 
 func (u *URLService) startDeleteWorker() {
-	ticker := time.NewTicker(time.Second * 10)
+	ticker := time.NewTicker(time.Second * 1)
+	defer ticker.Stop()
 	var buf []model.DeleteTaskDto
 
 	for {
 		select {
 		case task, ok := <-u.deleteCh:
 			if !ok {
+				if len(buf) > 0 {
+					u.repo.DeleteBatch(buf)
+					buf = buf[:0]
+				}
 				return
 			}
 			buf = append(buf, task)
+			if len(buf) == 1000 {
+				u.repo.DeleteBatch(buf)
+				buf = buf[:0]
+			}
 		case <-ticker.C:
 			if len(buf) > 0 {
 				u.repo.DeleteBatch(buf)
-				buf = nil
+				buf = buf[:0]
 			}
 		}
 	}

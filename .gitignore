@@ -17,7 +17,7 @@ cmd/shortener/main
 cmd/shortener/shortener
 
 # Local storage file
-cmd/shortener/file_storage.json
+cmd/shortener/file_storage.NDJSON
 
 # Dependency directories (remove the comment below to include it)
 vendor/
