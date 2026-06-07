@@ -10,6 +10,7 @@ import (
 	"database/sql"
 
 	"github.com/SergeyRG/shortener/internal/config"
+	"github.com/SergeyRG/shortener/internal/events"
 	"github.com/SergeyRG/shortener/internal/handler"
 	"github.com/SergeyRG/shortener/internal/logging"
 	"github.com/SergeyRG/shortener/internal/middleware"
@@ -89,10 +90,15 @@ func run() error {
 		}
 	}
 
+	requestTracker, err := initRequestTracker(cfg)
+	if err != nil {
+		logger.Fatal("не удалось инициализировать аудит запросов", zap.Error(err))
+	}
+
 	g := service.URLGenerator{}
 	svc := service.NewURLService(repo, cfg, g)
 
-	r := initRouter(svc, db, cfg)
+	r := initRouter(svc, db, cfg, requestTracker)
 	logger.Info("запуск приложения")
 
 	server := &http.Server{
@@ -108,7 +114,12 @@ func run() error {
 	return server.ListenAndServe()
 }
 
-func initRouter(svc service.URLServiceInterface, db *sql.DB, cfg config.Config) chi.Router {
+func initRouter(
+	svc service.URLServiceInterface,
+	db *sql.DB,
+	cfg config.Config,
+	rt *events.RequestAuditTracker,
+) chi.Router {
 	rootHandler := handler.RootHandler(svc)
 	redirectHandler := handler.RedirectHandler(svc)
 	JSONShortenHandler := handler.JSONShortenHandler(svc)
@@ -118,12 +129,14 @@ func initRouter(svc service.URLServiceInterface, db *sql.DB, cfg config.Config) 
 	UserBatchDeleteHandler := handler.UserBatchDeleteHandler(svc)
 
 	authMiddleware := middleware.Auth(cfg)
+	withAuditMiddleware := middleware.WithRequestAudit(rt)
 
 	r := chi.NewRouter()
 	r.Route("/", func(r chi.Router) {
 		r.Use(logging.WithLogging)
 		r.Use(authMiddleware)
 		r.Use(middleware.GzipMiddleware)
+		r.Use(withAuditMiddleware)
 		r.Post("/", rootHandler)
 		r.Get("/{id}", redirectHandler)
 		r.Get("/{id}/", redirectHandler)
@@ -135,4 +148,25 @@ func initRouter(svc service.URLServiceInterface, db *sql.DB, cfg config.Config) 
 		r.Delete("/api/user/urls", UserBatchDeleteHandler)
 	})
 	return r
+}
+
+func initRequestTracker(cfg config.Config) (*events.RequestAuditTracker, error) {
+	if cfg.AuditFilePath == "" && cfg.AuditURL == "" {
+		return nil, nil
+	}
+
+	rt := events.NewRequestAuditTracker()
+
+	if cfg.AuditFilePath != "" {
+		fa, err := events.NewFileRequestAuditor(cfg.AuditFilePath)
+		if err != nil {
+			return nil, err
+		}
+		rt.Register(fa)
+	}
+	if cfg.AuditURL != "" {
+		ha := events.NewHTTPRequestAuditor(cfg.AuditURL)
+		rt.Register(ha)
+	}
+	return rt, nil
 }

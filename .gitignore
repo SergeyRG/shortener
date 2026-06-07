@@ -18,6 +18,7 @@ cmd/shortener/shortener
 
 # Local storage file
 cmd/shortener/file_storage.NDJSON
+cmd/shortener/audit_test.txt
 
 # Dependency directories (remove the comment below to include it)
 vendor/
