@@ -11,8 +11,11 @@ import (
 
 	"github.com/SergeyRG/shortener/internal/config"
 	"github.com/SergeyRG/shortener/internal/handler"
+	"github.com/SergeyRG/shortener/internal/logging"
+	"github.com/SergeyRG/shortener/internal/middleware"
 	"github.com/SergeyRG/shortener/internal/repository"
 	"github.com/SergeyRG/shortener/internal/service"
+	"go.uber.org/zap/zaptest"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-resty/resty/v2"
@@ -20,16 +23,23 @@ import (
 )
 
 func Test_rootHandler(t *testing.T) {
+	logging.Logger = zaptest.NewLogger(t)
+
 	tmpFile, _ := os.CreateTemp("", "test_*.tmp")
 	tmpFile.Close()
-	repo := repository.NewInMemoryRepositoryURL(nil, tmpFile.Name())
+	repo, err := repository.NewInMemoryRepositoryURL(nil, tmpFile.Name())
+	if err != nil {
+		t.Fatalf("cant create repo: %v", err)
+	}
 	cfg := config.Config{
 		ServerAddress:       ":8080",
 		BaseShortURLAddress: "http://localhost:8080",
+		SecretKey:           "test",
 	}
 	g := service.URLGenerator{}
 	svc := service.NewURLService(repo, cfg, g)
-	h := http.HandlerFunc(handler.RootHandler(svc))
+	authMiddleware := middleware.Auth(cfg)
+	h := authMiddleware(handler.RootHandler(svc))
 	srv := httptest.NewServer(h)
 
 	defer srv.Close()
@@ -80,10 +90,16 @@ func Test_rootHandler(t *testing.T) {
 }
 
 func Test_redirectHandler(t *testing.T) {
-	tmpFile, _ := os.CreateTemp("", "test_*.tmp")
+	tmpFile, err := os.CreateTemp("", "test_*.tmp")
+	if err != nil {
+		t.Fatal("Cant create temp file")
+	}
 	tmpFile.Close()
-	repo := repository.NewInMemoryRepositoryURL(nil, tmpFile.Name())
-	repo.Add(context.Background(), "http://ya.ru", "HGHQZJH6")
+	repo, err := repository.NewInMemoryRepositoryURL(nil, tmpFile.Name())
+	if err != nil {
+		t.Fatalf("cant create repo: %v", err)
+	}
+	repo.Add(context.Background(), "http://ya.ru", "HGHQZJH6", "test")
 	cfg := config.Config{
 		ServerAddress:       ":8080",
 		BaseShortURLAddress: "http://localhost:8080",

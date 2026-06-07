@@ -15,8 +15,11 @@ func RedirectHandler(svc service.URLServiceInterface) http.HandlerFunc {
 			http.Error(rw, err.Error(), http.StatusBadRequest)
 			return
 		}
-
-		rw.Header().Set("Location", url)
+		if url.DeletedFlag {
+			rw.WriteHeader(http.StatusGone)
+			return
+		}
+		rw.Header().Set("Location", url.OriginURL)
 		rw.WriteHeader(http.StatusTemporaryRedirect)
 	}
 }

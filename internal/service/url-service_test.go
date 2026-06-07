@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/SergeyRG/shortener/internal/config"
+	"github.com/SergeyRG/shortener/internal/model"
 	"github.com/SergeyRG/shortener/internal/repository"
 	"github.com/SergeyRG/shortener/internal/service"
 	"github.com/SergeyRG/shortener/internal/service/mocks"
@@ -24,21 +25,21 @@ func TestURLService_GetOriginalURLByID(t *testing.T) {
 		name    string
 		cfg     config.Config
 		id      string
-		want    string
+		want    model.ShortenModel
 		wantErr error
 	}{
 		{
 			name:    "check that the value received from the repository is being returned",
 			cfg:     cfg,
 			id:      "DFSDFDD",
-			want:    "http://test.ru",
+			want:    model.ShortenModel{ID: "test", OriginURL: "http:/test.ru", UserID: "test", DeletedFlag: false},
 			wantErr: nil,
 		},
 		{
 			name:    "check that an error is returned if an error has occurred in the repository",
 			cfg:     cfg,
 			id:      "DFSDFDD",
-			want:    "http://test.ru",
+			want:    model.ShortenModel{ID: "test", OriginURL: "http:/test.ru", UserID: "test", DeletedFlag: false},
 			wantErr: errors.New("test"),
 		},
 	}
@@ -170,12 +171,13 @@ func TestURLService_AddShortURL(t *testing.T) {
 				gomock.Cond(func(x any) bool { return strings.Contains(x.(string), tt.url) })).
 				Times(tt.attempts).Return(tt.wantShortURL)
 
-			mr.EXPECT().Add(context.Background(), tt.url, tt.wantShortURL).Times(tt.attempts).Return(tt.repoErr)
-			mr.EXPECT().GetByID(gomock.Any(), gomock.Any()).AnyTimes().Return("test", nil)
+			mr.EXPECT().Add(context.Background(), tt.url, tt.wantShortURL, "test").Times(tt.attempts).Return(tt.repoErr)
+			mr.EXPECT().GetByID(gomock.Any(), gomock.Any()).AnyTimes().Return(
+				model.ShortenModel{ID: "test", OriginURL: "http:/test.ru", UserID: "test", DeletedFlag: false}, nil)
 
 			u := service.NewURLService(mr, tt.cfg, mg)
 
-			got, gotErr := u.AddShortURL(context.Background(), tt.url)
+			got, gotErr := u.AddShortURL(context.Background(), tt.url, "test")
 			if tt.wantErr != nil {
 				assert.Equal(t, tt.wantErr, gotErr)
 			} else {

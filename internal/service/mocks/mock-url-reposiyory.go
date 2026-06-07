@@ -42,31 +42,45 @@ func (m *MockURLRepository) EXPECT() *MockURLRepositoryMockRecorder {
 }
 
 // Add mocks base method.
-func (m *MockURLRepository) Add(ctx context.Context, url, id string) error {
+func (m *MockURLRepository) Add(ctx context.Context, url, id, userID string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Add", ctx, url, id)
+	ret := m.ctrl.Call(m, "Add", ctx, url, id, userID)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Add indicates an expected call of Add.
-func (mr *MockURLRepositoryMockRecorder) Add(ctx, url, id any) *gomock.Call {
+func (mr *MockURLRepositoryMockRecorder) Add(ctx, url, id, userID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Add", reflect.TypeOf((*MockURLRepository)(nil).Add), ctx, url, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Add", reflect.TypeOf((*MockURLRepository)(nil).Add), ctx, url, id, userID)
 }
 
 // AddBatch mocks base method.
-func (m *MockURLRepository) AddBatch(ctx context.Context, data []model.ShortenData) error {
+func (m *MockURLRepository) AddBatch(ctx context.Context, data []model.ShortenData, userID string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddBatch", ctx, data)
+	ret := m.ctrl.Call(m, "AddBatch", ctx, data, userID)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddBatch indicates an expected call of AddBatch.
-func (mr *MockURLRepositoryMockRecorder) AddBatch(ctx, data any) *gomock.Call {
+func (mr *MockURLRepositoryMockRecorder) AddBatch(ctx, data, userID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddBatch", reflect.TypeOf((*MockURLRepository)(nil).AddBatch), ctx, data)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddBatch", reflect.TypeOf((*MockURLRepository)(nil).AddBatch), ctx, data, userID)
+}
+
+// Close mocks base method.
+func (m *MockURLRepository) Close() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Close")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Close indicates an expected call of Close.
+func (mr *MockURLRepositoryMockRecorder) Close() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockURLRepository)(nil).Close))
 }
 
 // Delete mocks base method.
@@ -83,11 +97,25 @@ func (mr *MockURLRepositoryMockRecorder) Delete(ctx, id any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockURLRepository)(nil).Delete), ctx, id)
 }
 
+// DeleteBatch mocks base method.
+func (m *MockURLRepository) DeleteBatch(data []model.DeleteTaskDto) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteBatch", data)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteBatch indicates an expected call of DeleteBatch.
+func (mr *MockURLRepositoryMockRecorder) DeleteBatch(data any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteBatch", reflect.TypeOf((*MockURLRepository)(nil).DeleteBatch), data)
+}
+
 // GetByID mocks base method.
-func (m *MockURLRepository) GetByID(ctx context.Context, id string) (string, error) {
+func (m *MockURLRepository) GetByID(ctx context.Context, id string) (model.ShortenModel, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetByID", ctx, id)
-	ret0, _ := ret[0].(string)
+	ret0, _ := ret[0].(model.ShortenModel)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -96,4 +124,19 @@ func (m *MockURLRepository) GetByID(ctx context.Context, id string) (string, err
 func (mr *MockURLRepositoryMockRecorder) GetByID(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockURLRepository)(nil).GetByID), ctx, id)
+}
+
+// GetByUserID mocks base method.
+func (m *MockURLRepository) GetByUserID(ctx context.Context, userID string) ([]model.ShortenModel, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByUserID", ctx, userID)
+	ret0, _ := ret[0].([]model.ShortenModel)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetByUserID indicates an expected call of GetByUserID.
+func (mr *MockURLRepositoryMockRecorder) GetByUserID(ctx, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByUserID", reflect.TypeOf((*MockURLRepository)(nil).GetByUserID), ctx, userID)
 }

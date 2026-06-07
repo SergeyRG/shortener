@@ -25,9 +25,9 @@ func NewPSQLDBRepositoryURL(db *sql.DB) (*PSQLDBRepositoryURL, error) {
 	return nil, ErrNilDB
 }
 
-func (r *PSQLDBRepositoryURL) Add(ctx context.Context, url string, id string) error {
-	query := "Insert into urls (id, url) VALUES ($1, $2)"
-	_, err := r.stor.ExecContext(ctx, query, id, url)
+func (r *PSQLDBRepositoryURL) Add(ctx context.Context, url string, id string, userID string) error {
+	query := "Insert into urls (id, url, user_id, deleted_flag) VALUES ($1, $2, $3, false)"
+	_, err := r.stor.ExecContext(ctx, query, id, url, userID)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
@@ -38,14 +38,38 @@ func (r *PSQLDBRepositoryURL) Add(ctx context.Context, url string, id string) er
 	return nil
 }
 
-func (r *PSQLDBRepositoryURL) GetByID(ctx context.Context, id string) (string, error) {
-	query := "SELECT url from urls where id = $1"
+func (r *PSQLDBRepositoryURL) GetByID(ctx context.Context, id string) (model.ShortenModel, error) {
+	query := "SELECT url, user_id, deleted_flag from urls where id = $1"
 	row := r.stor.QueryRowContext(ctx, query, id)
-	var url string
-	if err := row.Scan(&url); err != nil {
-		return "", ErrURLNotFound
+	var data model.ShortenModel
+	if err := row.Scan(&data.OriginURL, &data.UserID, &data.DeletedFlag); err != nil {
+		return model.ShortenModel{}, ErrURLNotFound
 	}
-	return url, nil
+	data.ID = id
+	return data, nil
+}
+
+func (r *PSQLDBRepositoryURL) GetByUserID(ctx context.Context, userID string) ([]model.ShortenModel, error) {
+	query := "SELECT id, url, user_id, deleted_flag from urls where user_id = $1"
+	rows, err := r.stor.QueryContext(ctx, query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var userURL []model.ShortenModel
+
+	for rows.Next() {
+		var data model.ShortenModel
+		if err := rows.Scan(&data.ID, &data.OriginURL, &data.UserID, &data.DeletedFlag); err != nil {
+			return nil, err
+		}
+		userURL = append(userURL, data)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return userURL, nil
 }
 
 func (r *PSQLDBRepositoryURL) Delete(ctx context.Context, id string) error {
@@ -54,25 +78,43 @@ func (r *PSQLDBRepositoryURL) Delete(ctx context.Context, id string) error {
 	return err
 }
 
-func (r *PSQLDBRepositoryURL) AddBatch(ctx context.Context, data []model.ShortenData) error {
-	TX, err := r.stor.BeginTx(ctx, nil)
+func (r *PSQLDBRepositoryURL) AddBatch(ctx context.Context, data []model.ShortenData, userID string) error {
+	tx, err := r.stor.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
-	defer TX.Rollback()
+	defer tx.Rollback()
 
-	query := `INSERT INTO urls (id, url) VALUES($1,$2)`
-	stmt, err := TX.PrepareContext(ctx, query)
+	query := `INSERT INTO urls (id, url, user_id, deleted_flag) VALUES($1,$2,$3, false)`
+	stmt, err := tx.PrepareContext(ctx, query)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
 	for _, v := range data {
-		_, sqlErr := stmt.ExecContext(ctx, v.ID, v.OriginURL)
+		_, sqlErr := stmt.ExecContext(ctx, v.ID, v.OriginURL, userID)
 		if sqlErr != nil {
 			return sqlErr
 		}
 	}
-	return TX.Commit()
+	return tx.Commit()
+}
+
+func (r *PSQLDBRepositoryURL) DeleteBatch(data []model.DeleteTaskDto) error {
+	for _, d := range data {
+		query := `Update urls SET deleted_flag=true WHERE user_id = $1 
+          	  AND id = ANY($2) 
+              AND deleted_flag = false;`
+
+		_, err := r.stor.Exec(query, d.UserID, d.IDs)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *PSQLDBRepositoryURL) Close() error {
+	return r.stor.Close()
 }

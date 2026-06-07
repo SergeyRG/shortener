@@ -6,21 +6,20 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/SergeyRG/shortener/internal/auth"
 	"github.com/SergeyRG/shortener/internal/logging"
 	"github.com/SergeyRG/shortener/internal/service"
 	"go.uber.org/zap"
 )
 
-type request struct {
-	URL string `json:"url"`
-}
-
-type response struct {
-	Result string `json:"result"`
-}
-
 func JSONShortenHandler(svc service.URLServiceInterface) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		userID, ok := auth.UserIDFromContext(req.Context())
+		if !ok {
+			logging.Logger.Error("cant get user id")
+			rw.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 
 		decoder := json.NewDecoder(req.Body)
 		defer req.Body.Close()
@@ -35,7 +34,7 @@ func JSONShortenHandler(svc service.URLServiceInterface) http.HandlerFunc {
 		}
 		logging.Logger.Debug("json request is decoded")
 
-		ID, err := svc.AddShortURL(context.Background(), jr.URL)
+		ID, err := svc.AddShortURL(context.Background(), jr.URL, userID)
 		if err != nil && !errors.Is(err, service.ErrConflict) {
 			logging.Logger.Error("cant add short URL", zap.Error(err))
 			rw.WriteHeader(http.StatusBadRequest)

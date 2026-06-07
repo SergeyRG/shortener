@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log"
 	"net"
 	"net/url"
 	"os"
@@ -68,6 +69,7 @@ type Config struct {
 	BaseShortURLAddress string
 	FileStoragePath     string
 	DBDSN               string
+	SecretKey           string
 }
 
 func NewConfig() (Config, error) {
@@ -75,6 +77,8 @@ func NewConfig() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	defKey := string("DEFAULT_SECRET_KEY")
+	SecretKey := &defKey
 
 	binDir := filepath.Dir(binPath)
 
@@ -100,6 +104,11 @@ func NewConfig() (Config, error) {
 	if val, exist := os.LookupEnv("DATABASE_DSN"); exist {
 		*DBDSN = val
 	}
+	if val, exist := os.LookupEnv("SECRET_KEY"); exist {
+		*SecretKey = val
+	} else {
+		log.Printf("Используется ключ по умолчанию")
+	}
 
 	if err := validateServerAddress(*ServerAddress); err != nil {
 		return Config{}, err
@@ -114,6 +123,7 @@ func NewConfig() (Config, error) {
 			BaseShortURLAddress: *BaseShortURLAddress,
 			FileStoragePath:     *FileStoragePath,
 			DBDSN:               *DBDSN,
+			SecretKey:           *SecretKey,
 		},
 		nil
 }

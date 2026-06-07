@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	model "github.com/SergeyRG/shortener/internal/model"
 	service "github.com/SergeyRG/shortener/internal/service"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -42,40 +43,52 @@ func (m *MockURLServiceInterface) EXPECT() *MockURLServiceInterfaceMockRecorder 
 }
 
 // AddBatch mocks base method.
-func (m *MockURLServiceInterface) AddBatch(ctx context.Context, data []service.BatchDataRequest) ([]service.BatchDataResponse, error) {
+func (m *MockURLServiceInterface) AddBatch(ctx context.Context, data []service.BatchDataRequest, userID string) ([]service.BatchDataResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddBatch", ctx, data)
+	ret := m.ctrl.Call(m, "AddBatch", ctx, data, userID)
 	ret0, _ := ret[0].([]service.BatchDataResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AddBatch indicates an expected call of AddBatch.
-func (mr *MockURLServiceInterfaceMockRecorder) AddBatch(ctx, data any) *gomock.Call {
+func (mr *MockURLServiceInterfaceMockRecorder) AddBatch(ctx, data, userID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddBatch", reflect.TypeOf((*MockURLServiceInterface)(nil).AddBatch), ctx, data)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddBatch", reflect.TypeOf((*MockURLServiceInterface)(nil).AddBatch), ctx, data, userID)
+}
+
+// AddForDeleting mocks base method.
+func (m *MockURLServiceInterface) AddForDeleting(ctx context.Context, data model.DeleteTaskDto) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "AddForDeleting", ctx, data)
+}
+
+// AddForDeleting indicates an expected call of AddForDeleting.
+func (mr *MockURLServiceInterfaceMockRecorder) AddForDeleting(ctx, data any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddForDeleting", reflect.TypeOf((*MockURLServiceInterface)(nil).AddForDeleting), ctx, data)
 }
 
 // AddShortURL mocks base method.
-func (m *MockURLServiceInterface) AddShortURL(ctx context.Context, url string) (string, error) {
+func (m *MockURLServiceInterface) AddShortURL(ctx context.Context, url, userID string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddShortURL", ctx, url)
+	ret := m.ctrl.Call(m, "AddShortURL", ctx, url, userID)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // AddShortURL indicates an expected call of AddShortURL.
-func (mr *MockURLServiceInterfaceMockRecorder) AddShortURL(ctx, url any) *gomock.Call {
+func (mr *MockURLServiceInterfaceMockRecorder) AddShortURL(ctx, url, userID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddShortURL", reflect.TypeOf((*MockURLServiceInterface)(nil).AddShortURL), ctx, url)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddShortURL", reflect.TypeOf((*MockURLServiceInterface)(nil).AddShortURL), ctx, url, userID)
 }
 
 // GetOriginalURLByID mocks base method.
-func (m *MockURLServiceInterface) GetOriginalURLByID(ctx context.Context, id string) (string, error) {
+func (m *MockURLServiceInterface) GetOriginalURLByID(ctx context.Context, id string) (model.ShortenModel, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetOriginalURLByID", ctx, id)
-	ret0, _ := ret[0].(string)
+	ret0, _ := ret[0].(model.ShortenModel)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -84,6 +97,21 @@ func (m *MockURLServiceInterface) GetOriginalURLByID(ctx context.Context, id str
 func (mr *MockURLServiceInterfaceMockRecorder) GetOriginalURLByID(ctx, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOriginalURLByID", reflect.TypeOf((*MockURLServiceInterface)(nil).GetOriginalURLByID), ctx, id)
+}
+
+// GetURLByUserID mocks base method.
+func (m *MockURLServiceInterface) GetURLByUserID(ctx context.Context, userID string) ([]service.UserURLData, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetURLByUserID", ctx, userID)
+	ret0, _ := ret[0].([]service.UserURLData)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetURLByUserID indicates an expected call of GetURLByUserID.
+func (mr *MockURLServiceInterfaceMockRecorder) GetURLByUserID(ctx, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetURLByUserID", reflect.TypeOf((*MockURLServiceInterface)(nil).GetURLByUserID), ctx, userID)
 }
 
 // MakeShortURLByID mocks base method.

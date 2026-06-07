@@ -13,6 +13,7 @@ import (
 	"github.com/SergeyRG/shortener/internal/handler"
 	"github.com/SergeyRG/shortener/internal/logging"
 	"github.com/SergeyRG/shortener/internal/middleware"
+	"github.com/SergeyRG/shortener/internal/model"
 	"github.com/SergeyRG/shortener/internal/repository"
 	"github.com/SergeyRG/shortener/internal/service"
 	"github.com/SergeyRG/shortener/migrations"
@@ -47,14 +48,13 @@ func run() error {
 		if err != nil {
 			logger.Fatal("не удалось открыть/создать файл", zap.Error(err))
 		}
-		defer fileStore.Close()
 
 		decoder := json.NewDecoder(fileStore)
-		stor := make(map[string]string)
+		stor := make(map[string]*model.ShortenModel)
 		for decoder.More() {
 			if err := decoder.Decode(&stor); err != nil {
 				logging.Logger.Error("Ошибка восстановления сохраненных URL", zap.Error(err))
-				stor = make(map[string]string)
+				stor = make(map[string]*model.ShortenModel)
 				break
 			}
 		}
@@ -64,8 +64,12 @@ func run() error {
 		} else {
 			logger.Info("Файл сохраненных URL пустой, либо произошла ошибка чтения")
 		}
-		repo = repository.NewInMemoryRepositoryURL(stor, cfg.FileStoragePath)
+		fileStore.Close()
 
+		repo, err = repository.NewInMemoryRepositoryURL(stor, cfg.FileStoragePath)
+		if err != nil {
+			logger.Fatal("не удалось создать объект репозиториия", zap.Error(err))
+		}
 	} else {
 		var err error
 		db, err = sql.Open("pgx", cfg.DBDSN)
@@ -88,22 +92,7 @@ func run() error {
 	g := service.URLGenerator{}
 	svc := service.NewURLService(repo, cfg, g)
 
-	rootHandler := logging.WithLogging(middleware.GzipMiddleware(handler.RootHandler(svc)))
-	redirectHandler := logging.WithLogging(middleware.GzipMiddleware(handler.RedirectHandler(svc)))
-	JSONShortenHandler := logging.WithLogging(middleware.GzipMiddleware((handler.JSONShortenHandler(svc))))
-	DBPingHandler := logging.WithLogging(middleware.GzipMiddleware((handler.DBPingHandler(db))))
-	BatchAddHandler := logging.WithLogging(middleware.GzipMiddleware((handler.BatchAddHandler(svc))))
-
-	r := chi.NewRouter()
-	r.Route("/", func(r chi.Router) {
-		r.Post("/", rootHandler)
-		r.Get("/{id}", redirectHandler)
-		r.Get("/{id}/", redirectHandler)
-		r.Get("/ping", DBPingHandler)
-		r.Get("/ping/", DBPingHandler)
-		r.Post("/api/shorten", JSONShortenHandler)
-		r.Post("/api/shorten/batch", BatchAddHandler)
-	})
+	r := initRouter(svc, db, cfg)
 	logger.Info("запуск приложения")
 
 	server := &http.Server{
@@ -115,5 +104,35 @@ func run() error {
 		IdleTimeout:       120 * time.Second,
 	}
 
+	defer repo.Close()
 	return server.ListenAndServe()
+}
+
+func initRouter(svc service.URLServiceInterface, db *sql.DB, cfg config.Config) chi.Router {
+	rootHandler := handler.RootHandler(svc)
+	redirectHandler := handler.RedirectHandler(svc)
+	JSONShortenHandler := handler.JSONShortenHandler(svc)
+	DBPingHandler := handler.DBPingHandler(db)
+	BatchAddHandler := handler.BatchAddHandler(svc)
+	UserURLHandler := handler.UserURLHandler(svc)
+	UserBatchDeleteHandler := handler.UserBatchDeleteHandler(svc)
+
+	authMiddleware := middleware.Auth(cfg)
+
+	r := chi.NewRouter()
+	r.Route("/", func(r chi.Router) {
+		r.Use(logging.WithLogging)
+		r.Use(authMiddleware)
+		r.Use(middleware.GzipMiddleware)
+		r.Post("/", rootHandler)
+		r.Get("/{id}", redirectHandler)
+		r.Get("/{id}/", redirectHandler)
+		r.Get("/ping", DBPingHandler)
+		r.Get("/ping/", DBPingHandler)
+		r.Post("/api/shorten", JSONShortenHandler)
+		r.Post("/api/shorten/batch", BatchAddHandler)
+		r.Get("/api/user/urls", UserURLHandler)
+		r.Delete("/api/user/urls", UserBatchDeleteHandler)
+	})
+	return r
 }

@@ -90,8 +90,8 @@ func (c *gzipReader) Close() error {
 	return c.zr.Close()
 }
 
-func GzipMiddleware(h http.HandlerFunc) http.HandlerFunc {
-	return func(rw http.ResponseWriter, r *http.Request) {
+func GzipMiddleware(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		ow := rw
 		logging.Logger.Debug("получен запрос",
 			zap.String("Header", strings.Join(r.Header["Accept-Encoding"], ",")))
@@ -121,5 +121,5 @@ func GzipMiddleware(h http.HandlerFunc) http.HandlerFunc {
 
 		// передаём управление хендлеру
 		h.ServeHTTP(ow, r)
-	}
+	})
 }
