@@ -18,7 +18,7 @@ type RequestAuditor interface {
 }
 
 type EventRequestHandled struct {
-	Ts     time.Time  `json:"ts"`
+	TS     time.Time  `json:"ts"`
 	Action ActionType `json:"action"`
 	UserID string     `json:"user_id"`
 	URL    string     `json:"url"`
@@ -27,10 +27,10 @@ type EventRequestHandled struct {
 func (e *EventRequestHandled) MarshalJSON() ([]byte, error) {
 	type alias EventRequestHandled
 	return json.Marshal(&struct {
-		Ts int64 `json:"ts"`
+		TS int64 `json:"ts"`
 		alias
 	}{
-		Ts:    e.Ts.Unix(),
+		TS:    e.TS.Unix(),
 		alias: alias(*e),
 	})
 }

@@ -42,7 +42,7 @@ func WithRequestAudit(rt *events.RequestAuditTracker) func(http.Handler) http.Ha
 			userID, _ := auth.UserIDFromContext(r.Context())
 
 			e := events.EventRequestHandled{
-				Ts:     time.Now(),
+				TS:     time.Now(),
 				Action: action,
 				UserID: userID,
 				URL:    r.URL.String(),
