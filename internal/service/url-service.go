@@ -150,6 +150,9 @@ func (u *URLService) startDeleteWorker() {
 type URLGenerator struct{}
 
 func (ug URLGenerator) CalculateShortURLID(url string) string {
-	var hash = sha256.Sum256([]byte(url))
-	return string([]byte(base32.StdEncoding.EncodeToString(hash[:]))[:8])
+	// оптимизация выделения памяти в куче
+	hash := sha256.Sum256([]byte(url))
+	var buf [8]byte
+	base32.StdEncoding.Encode(buf[:], hash[:5])
+	return string(buf[:])
 }
