@@ -10,6 +10,15 @@ import (
 	"go.uber.org/zap"
 )
 
+// BatchAddHandler возвращает обработчик для пакетного создания сокращенных URL.
+//
+// Принимает на вход JSON-массив объектов с полями correlation_id и original_url:
+//
+//	[
+//	  {"correlation_id": "1", "original_url": "http://test.ru"}
+//	]
+//
+// Для работы обработчика необходима реализация [service.URLServiceInterface].
 func BatchAddHandler(svc service.URLServiceInterface) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		userID, ok := auth.UserIDFromContext(req.Context())

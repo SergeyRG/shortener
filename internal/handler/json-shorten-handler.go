@@ -12,6 +12,19 @@ import (
 	"go.uber.org/zap"
 )
 
+// JSONShortenHandler возвращает обработчик для создания короткого URL, при этом оригинальный
+// URL передаетс в виде json. Например:
+//
+//	{
+//	    "url":"http://test.test"
+//	}
+//
+// Обрабатывает GET запросы.
+// В случае успеха, возвращает json вида:
+//
+//	{
+//	  "result":"JDNFBGN"
+//	}
 func JSONShortenHandler(svc service.URLServiceInterface) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		userID, ok := auth.UserIDFromContext(req.Context())

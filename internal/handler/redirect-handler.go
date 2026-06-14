@@ -6,6 +6,10 @@ import (
 	"github.com/SergeyRG/shortener/internal/service"
 )
 
+// RedirectHandler возвращает обработчик для перенаправления на оригинальный URL
+// по короткой ссылке.
+//
+// Идентификатор передаются как URL параметр.
 func RedirectHandler(svc service.URLServiceInterface) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 

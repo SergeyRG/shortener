@@ -65,6 +65,8 @@ func (u *URLService) MakeShortURLByID(ctx context.Context, id string) (string, e
 	return res, nil
 }
 
+// AddShortURL метод выполняет основную функцию приложения - добавление короткого URl.
+// Если URL добавляется повторно, то возвращается короткий URL и ошибка ErrConflict.
 func (u *URLService) AddShortURL(ctx context.Context, url string, userID string) (string, error) {
 	var addition = ""
 	var id = ""

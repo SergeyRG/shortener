@@ -8,6 +8,12 @@ import (
 	"go.uber.org/zap"
 )
 
+// DBPingHandler возвращает обработчик для проверки соединения с БД.
+//
+// Обрабатывает GET запросы.
+// Возвращает ответ с кодом 200 в случае успешного установления соедининия
+// с БД.
+// Возвращает ответ с кодом 506 в случае ошибки.
 func DBPingHandler(db *sql.DB) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		if db == nil {

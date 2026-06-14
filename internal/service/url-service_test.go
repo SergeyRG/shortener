@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -186,4 +188,40 @@ func TestURLService_AddShortURL(t *testing.T) {
 
 		})
 	}
+}
+
+func ExampleURLService_AddShortURL() {
+	// Инициализация сервиса
+
+	tempDir, err := os.MkdirTemp("", "shortener_example_*")
+	if err != nil {
+		panic(err)
+	}
+	defer os.RemoveAll(tempDir)
+	cfg := config.Config{
+		ServerAddress:       ":8080",
+		BaseShortURLAddress: "http://localhost:8080",
+		FileStoragePath:     filepath.Join(tempDir, "test_storage.txt"),
+	}
+
+	if err := os.WriteFile(cfg.FileStoragePath, []byte(""), 0644); err != nil {
+		panic(err)
+	}
+
+	var repo service.URLRepository
+	stor := make(map[string]*model.ShortenModel)
+	repo, err = repository.NewInMemoryRepositoryURL(stor, cfg.FileStoragePath)
+	if err != nil {
+		panic(err)
+	}
+
+	g := service.URLGenerator{}
+	svc := service.NewURLService(repo, cfg, g)
+
+	shortURL, err := svc.AddShortURL(context.Background(), "http://test.ru", "test")
+
+	fmt.Println(shortURL)
+
+	// output:
+	// HLBXMODO
 }

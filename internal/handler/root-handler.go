@@ -11,6 +11,10 @@ import (
 	"github.com/SergeyRG/shortener/internal/service"
 )
 
+// RootHandler возвращает обработчик для создания короткого URL, при этом оригинальный
+// URL передаетс в виде простого текста в body. Например:
+//
+// В случае успеха, возвращает идентификатор также в виде текста в body.
 func RootHandler(svc service.URLServiceInterface) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		userID, ok := auth.UserIDFromContext(req.Context())
