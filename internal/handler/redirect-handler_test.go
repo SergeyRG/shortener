@@ -15,6 +15,12 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
+func withDumpAudit(h handler.AuditableHandler) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		h(rw, r)
+	}
+}
+
 func TestRedirectHandler(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -43,7 +49,7 @@ func TestRedirectHandler(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/"+tt.inID, nil)
 			rw := httptest.NewRecorder()
 
-			redirectHandler := handler.RedirectHandler(m)
+			redirectHandler := withDumpAudit(handler.RedirectHandler(m))
 
 			r := chi.NewRouter()
 			r.Route("/{id}", func(r chi.Router) {

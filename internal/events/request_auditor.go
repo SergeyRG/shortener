@@ -1,40 +1,48 @@
 package events
 
 import (
-	"encoding/json"
+	"context"
 	"time"
+
+	"github.com/SergeyRG/shortener/internal/logging"
+	"go.uber.org/zap"
 )
 
-type ActionType string
-
-const (
-	ActionTypeUnknown ActionType = "unknown"
-	ActionTypeShorten ActionType = "shorten"
-	ActionTypeFollow  ActionType = "follow"
-)
-
-type RequestAuditor interface {
-	handleAuditEvent(Event) error
+type RequestAuditor struct {
+	EventCh chan Event
+	timeOut time.Duration
+	rat     *RequestAuditTracker
 }
 
-type EventRequestHandled struct {
-	TS     time.Time  `json:"ts"`
-	Action ActionType `json:"action"`
-	UserID string     `json:"user_id"`
-	URL    string     `json:"url"`
+func NewRequestAuditor(rat *RequestAuditTracker, EventCh chan Event, t time.Duration) *RequestAuditor {
+	if rat == nil {
+		return nil
+	}
+	return &RequestAuditor{
+		rat:     rat,
+		timeOut: t,
+		EventCh: EventCh,
+	}
 }
 
-func (e *EventRequestHandled) MarshalJSON() ([]byte, error) {
-	type alias EventRequestHandled
-	return json.Marshal(&struct {
-		TS int64 `json:"ts"`
-		alias
-	}{
-		TS:    e.TS.Unix(),
-		alias: alias(*e),
-	})
+func (ra *RequestAuditor) SendEvent(e Event) {
+	ctx, cancel := context.WithTimeout(context.Background(), ra.timeOut)
+	defer cancel()
+
+	select {
+	case ra.EventCh <- e:
+	case <-ctx.Done():
+		logging.Logger.Error(
+			"Событие аудита не записано в канал аудита. Запись в канал прервана по таймауту",
+			zap.Any("event", e))
+	}
 }
 
-func (e *EventRequestHandled) eventType() eventType {
-	return EventTypeRequestHandled
+func (ra *RequestAuditor) StartAuditTracking() {
+	logging.Logger.Debug("Запуск потока аудита запросов")
+	go func() {
+		for e := range ra.EventCh {
+			ra.rat.Notify(e)
+		}
+	}()
 }

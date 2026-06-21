@@ -22,6 +22,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func withDumpAudit(h handler.AuditableHandler) http.HandlerFunc {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		h(rw, r)
+	}
+}
+
 func Test_rootHandler(t *testing.T) {
 	logging.Logger = zaptest.NewLogger(t)
 
@@ -39,7 +45,7 @@ func Test_rootHandler(t *testing.T) {
 	g := service.URLGenerator{}
 	svc := service.NewURLService(repo, cfg, g)
 	authMiddleware := middleware.Auth(cfg)
-	h := authMiddleware(handler.RootHandler(svc))
+	h := authMiddleware(withDumpAudit(handler.RootHandler(svc)))
 	srv := httptest.NewServer(h)
 
 	defer srv.Close()
@@ -106,7 +112,7 @@ func Test_redirectHandler(t *testing.T) {
 	}
 	g := service.URLGenerator{}
 	svc := service.NewURLService(repo, cfg, g)
-	h := handler.RedirectHandler(svc)
+	h := withDumpAudit(handler.RedirectHandler(svc))
 	r := chi.NewRouter()
 	r.Route("/{id}", func(r chi.Router) {
 		r.Get("/", h)

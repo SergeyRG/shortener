@@ -67,7 +67,7 @@ func TestRootHandler(t *testing.T) {
 			req = req.WithContext(auth.ContextWithUserID(context.Background(), "test"))
 			rw := httptest.NewRecorder()
 
-			rootHandler := handler.RootHandler(m)
+			rootHandler := withDumpAudit(handler.RootHandler(m))
 
 			r := chi.NewRouter()
 			r.Post("/", rootHandler)

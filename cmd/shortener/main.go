@@ -90,15 +90,19 @@ func run() error {
 		}
 	}
 
-	requestTracker, err := initRequestTracker(cfg)
+	requestAuditor, err := initRequestAuditor(cfg)
 	if err != nil {
 		logger.Fatal("не удалось инициализировать аудит запросов", zap.Error(err))
+	}
+
+	if requestAuditor != nil {
+		requestAuditor.StartAuditTracking()
 	}
 
 	g := service.URLGenerator{}
 	svc := service.NewURLService(repo, cfg, g)
 
-	r := initRouter(svc, db, cfg, requestTracker)
+	r := initRouter(svc, db, cfg, requestAuditor)
 	logger.Info("запуск приложения")
 
 	server := &http.Server{
@@ -118,25 +122,29 @@ func initRouter(
 	svc service.URLServiceInterface,
 	db *sql.DB,
 	cfg config.Config,
-	rt *events.RequestAuditTracker,
+	ra *events.RequestAuditor,
 ) chi.Router {
-	rootHandler := handler.RootHandler(svc)
-	redirectHandler := handler.RedirectHandler(svc)
-	JSONShortenHandler := handler.JSONShortenHandler(svc)
+	rootHandlerAuditable := handler.RootHandler(svc)
+	rootHandler := handler.WithAudit(ra, rootHandlerAuditable)
+
+	redirectHandlerAuditable := handler.RedirectHandler(svc)
+	redirectHandler := handler.WithAudit(ra, redirectHandlerAuditable)
+
+	JSONShortenHandlerAuditable := handler.JSONShortenHandler(svc)
+	JSONShortenHandler := handler.WithAudit(ra, JSONShortenHandlerAuditable)
+
 	DBPingHandler := handler.DBPingHandler(db)
 	BatchAddHandler := handler.BatchAddHandler(svc)
 	UserURLHandler := handler.UserURLHandler(svc)
 	UserBatchDeleteHandler := handler.UserBatchDeleteHandler(svc)
 
 	authMiddleware := middleware.Auth(cfg)
-	withAuditMiddleware := middleware.WithRequestAudit(rt)
 
 	r := chi.NewRouter()
 	r.Route("/", func(r chi.Router) {
 		r.Use(logging.WithLogging)
 		r.Use(authMiddleware)
 		r.Use(middleware.GzipMiddleware)
-		r.Use(withAuditMiddleware)
 		r.Post("/", rootHandler)
 		r.Get("/{id}", redirectHandler)
 		r.Get("/{id}/", redirectHandler)
@@ -150,7 +158,7 @@ func initRouter(
 	return r
 }
 
-func initRequestTracker(cfg config.Config) (*events.RequestAuditTracker, error) {
+func initRequestAuditor(cfg config.Config) (*events.RequestAuditor, error) {
 	if cfg.AuditFilePath == "" && cfg.AuditURL == "" {
 		return nil, nil
 	}
@@ -158,15 +166,17 @@ func initRequestTracker(cfg config.Config) (*events.RequestAuditTracker, error) 
 	rt := events.NewRequestAuditTracker()
 
 	if cfg.AuditFilePath != "" {
-		fa, err := events.NewFileRequestAuditor(cfg.AuditFilePath)
+		fa, err := events.NewFileRequestAuditHandler(cfg.AuditFilePath)
 		if err != nil {
 			return nil, err
 		}
 		rt.Register(fa)
 	}
 	if cfg.AuditURL != "" {
-		ha := events.NewHTTPRequestAuditor(cfg.AuditURL)
+		ha := events.NewHTTPRequestAuditHandler(cfg.AuditURL)
 		rt.Register(ha)
 	}
-	return rt, nil
+
+	ra := events.NewRequestAuditor(rt, make(chan events.Event, 1), time.Second*10)
+	return ra, nil
 }

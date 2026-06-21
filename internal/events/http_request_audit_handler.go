@@ -4,20 +4,22 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/SergeyRG/shortener/internal/logging"
 	"github.com/go-resty/resty/v2"
 )
 
-type HTTPRequestAuditor struct {
+type HTTPRequestAuditHandler struct {
 	URL string
 }
 
-func NewHTTPRequestAuditor(URL string) *HTTPRequestAuditor {
-	return &HTTPRequestAuditor{
+func NewHTTPRequestAuditHandler(URL string) *HTTPRequestAuditHandler {
+	return &HTTPRequestAuditHandler{
 		URL: URL,
 	}
 }
 
-func (hra *HTTPRequestAuditor) handleAuditEvent(e Event) error {
+func (hra *HTTPRequestAuditHandler) handleAuditEvent(e Event) error {
+	logging.Logger.Debug("Передача события аудита запросов на web server")
 	HTTPClient := resty.New().
 		SetTimeout(5*time.Second).
 		SetHeader("Content-type", "application/json")
@@ -33,6 +35,6 @@ func (hra *HTTPRequestAuditor) handleAuditEvent(e Event) error {
 	return nil
 }
 
-func (hra *HTTPRequestAuditor) onEvent(e Event) error {
+func (hra *HTTPRequestAuditHandler) onEvent(e Event) error {
 	return hra.handleAuditEvent(e)
 }

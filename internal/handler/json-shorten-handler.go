@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/SergeyRG/shortener/internal/auth"
+	"github.com/SergeyRG/shortener/internal/events"
 	"github.com/SergeyRG/shortener/internal/logging"
 	"github.com/SergeyRG/shortener/internal/service"
 	"go.uber.org/zap"
@@ -25,13 +27,13 @@ import (
 //	{
 //	  "result":"JDNFBGN"
 //	}
-func JSONShortenHandler(svc service.URLServiceInterface) http.HandlerFunc {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+func JSONShortenHandler(svc service.URLServiceInterface) AuditableHandler {
+	return func(rw http.ResponseWriter, req *http.Request) events.Event {
 		userID, ok := auth.UserIDFromContext(req.Context())
 		if !ok {
 			logging.Logger.Error("cant get user id")
 			rw.WriteHeader(http.StatusInternalServerError)
-			return
+			return nil
 		}
 
 		decoder := json.NewDecoder(req.Body)
@@ -43,7 +45,7 @@ func JSONShortenHandler(svc service.URLServiceInterface) http.HandlerFunc {
 		if err := decoder.Decode(jr); err != nil {
 			logging.Logger.Error("cant decode json request", zap.Error(err))
 			rw.WriteHeader(http.StatusBadRequest)
-			return
+			return nil
 		}
 		logging.Logger.Debug("json request is decoded")
 
@@ -51,7 +53,7 @@ func JSONShortenHandler(svc service.URLServiceInterface) http.HandlerFunc {
 		if err != nil && !errors.Is(err, service.ErrConflict) {
 			logging.Logger.Error("cant add short URL", zap.Error(err))
 			rw.WriteHeader(http.StatusBadRequest)
-			return
+			return nil
 		}
 
 		status := http.StatusCreated
@@ -63,7 +65,7 @@ func JSONShortenHandler(svc service.URLServiceInterface) http.HandlerFunc {
 		if err != nil {
 			logging.Logger.Error("cant make short URL", zap.Error(err))
 			rw.WriteHeader(http.StatusBadRequest)
-			return
+			return nil
 		}
 
 		r := response{
@@ -78,9 +80,15 @@ func JSONShortenHandler(svc service.URLServiceInterface) http.HandlerFunc {
 		err = encoder.Encode(r)
 		if err != nil {
 			logging.Logger.Debug("error encoding response", zap.Error(err))
-			return
+			return nil
 		}
 		logging.Logger.Debug("response sent", zap.Error(err))
 
-	})
+		return &events.EventRequestHandled{
+			TS:     time.Now(),
+			Action: events.ActionTypeShorten,
+			UserID: userID,
+			URL:    jr.URL,
+		}
+	}
 }

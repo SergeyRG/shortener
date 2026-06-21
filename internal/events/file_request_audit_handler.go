@@ -4,23 +4,26 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+
+	"github.com/SergeyRG/shortener/internal/logging"
 )
 
-type FileRequestAuditor struct {
+type FileRequestAuditHandler struct {
 	file *os.File
 }
 
-func NewFileRequestAuditor(filePath string) (*FileRequestAuditor, error) {
+func NewFileRequestAuditHandler(filePath string) (*FileRequestAuditHandler, error) {
 	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		return nil, err
 	}
-	return &FileRequestAuditor{
+	return &FileRequestAuditHandler{
 		file: file,
 	}, nil
 }
 
-func (fra *FileRequestAuditor) handleAuditEvent(e Event) error {
+func (fra *FileRequestAuditHandler) handleAuditEvent(e Event) error {
+	logging.Logger.Debug("Запись события аудита запросов в файл")
 	if e.eventType() != EventTypeRequestHandled {
 		return nil
 	}
@@ -41,6 +44,6 @@ func (fra *FileRequestAuditor) handleAuditEvent(e Event) error {
 	return nil
 }
 
-func (fra *FileRequestAuditor) onEvent(e Event) error {
+func (fra *FileRequestAuditHandler) onEvent(e Event) error {
 	return fra.handleAuditEvent(e)
 }
