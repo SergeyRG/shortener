@@ -27,8 +27,14 @@ func NewURLService(r URLRepository, cfg config.Config, idGenerator ShortURLIDGen
 		idGenerator: idGenerator,
 		deleteCh:    make(chan model.DeleteTaskDto, 1),
 	}
-	go us.startDeleteWorker()
+
 	return us
+}
+
+func (u *URLService) Close() error {
+	err := u.repo.Close()
+	close(u.deleteCh)
+	return err
 }
 
 func (u *URLService) GetOriginalURLByID(ctx context.Context, id string) (model.ShortenModel, error) {
@@ -121,13 +127,18 @@ func (u *URLService) AddForDeleting(ctx context.Context, data model.DeleteTaskDt
 	u.deleteCh <- data
 }
 
-func (u *URLService) startDeleteWorker() {
+func (u *URLService) StartDeleteWorker(stopCtx context.Context) {
 	ticker := time.NewTicker(time.Second * 1)
 	defer ticker.Stop()
 	var buf []model.DeleteTaskDto
 
 	for {
 		select {
+		case <-stopCtx.Done():
+			if len(buf) > 0 {
+				u.repo.DeleteBatch(buf)
+			}
+			return
 		case task, ok := <-u.deleteCh:
 			if !ok {
 				if len(buf) > 0 {

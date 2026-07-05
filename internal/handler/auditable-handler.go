@@ -15,7 +15,7 @@ func WithAudit(ra *events.RequestAuditor, h AuditableHandler) http.HandlerFunc {
 			return
 		}
 		if e != nil {
-			go ra.SendEvent(e)
+			ra.SendEvent(e)
 		}
 	}
 }

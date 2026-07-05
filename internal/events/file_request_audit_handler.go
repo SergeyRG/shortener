@@ -44,6 +44,6 @@ func (fra *FileRequestAuditHandler) handleAuditEvent(e Event) error {
 	return nil
 }
 
-func (fra *FileRequestAuditHandler) onEvent(e Event) error {
+func (fra *FileRequestAuditHandler) Handle(e Event) error {
 	return fra.handleAuditEvent(e)
 }

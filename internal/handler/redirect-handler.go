@@ -30,7 +30,7 @@ func RedirectHandler(svc service.URLServiceInterface) AuditableHandler {
 
 		return &events.EventRequestHandled{
 			TS:     time.Now(),
-			Action: events.ActionTypeShorten,
+			Action: events.ActionTypeFollow,
 			URL:    url.OriginURL,
 		}
 	}

@@ -1,10 +1,15 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"database/sql"
@@ -21,6 +26,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 )
 
 func main() {
@@ -30,6 +36,9 @@ func main() {
 }
 
 func run() error {
+	stopCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	cfg, err := config.NewConfig()
 	if err != nil {
 		log.Fatalf("ошибка валидации конфигурации: %s", err)
@@ -99,8 +108,15 @@ func run() error {
 		requestAuditor.StartAuditTracking()
 	}
 
+	errg, ctx := errgroup.WithContext(stopCtx)
+
 	g := service.URLGenerator{}
 	svc := service.NewURLService(repo, cfg, g)
+
+	errg.Go(func() error {
+		svc.StartDeleteWorker(ctx)
+		return nil
+	})
 
 	r := initRouter(svc, db, cfg, requestAuditor)
 	logger.Info("запуск приложения")
@@ -113,9 +129,35 @@ func run() error {
 		ReadHeaderTimeout: 2 * time.Second,
 		IdleTimeout:       120 * time.Second,
 	}
+	errg.Go(func() error {
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			return fmt.Errorf("критическая ошибка HTTP-сервера: %w", err)
+		}
+		return nil
+	})
 
-	defer repo.Close()
-	return server.ListenAndServe()
+	errg.Go(func() error {
+		<-ctx.Done()
+		logger.Debug("начало остановки приложения")
+
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		if err := server.Shutdown(shutdownCtx); err != nil {
+			logger.Error("ошибка при остановке HTTP-сервера", zap.Error(err))
+		}
+
+		svc.Close()
+		return nil
+	})
+
+	if err := errg.Wait(); err != nil {
+		return fmt.Errorf("приложение завершилось с ошибкой: %w", err)
+	}
+
+	logger.Info("Приложение успешно остановлено")
+	return nil
+
 }
 
 func initRouter(

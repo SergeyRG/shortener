@@ -9,22 +9,25 @@ import (
 )
 
 type HTTPRequestAuditHandler struct {
-	URL string
+	URL        string
+	HTTPClient *resty.Client
 }
 
 func NewHTTPRequestAuditHandler(URL string) *HTTPRequestAuditHandler {
+	HTTPClient := resty.New().
+		SetTimeout(5*time.Second).
+		SetHeader("Content-type", "application/json")
+
 	return &HTTPRequestAuditHandler{
-		URL: URL,
+		URL:        URL,
+		HTTPClient: HTTPClient,
 	}
 }
 
 func (hra *HTTPRequestAuditHandler) handleAuditEvent(e Event) error {
 	logging.Logger.Debug("Передача события аудита запросов на web server")
-	HTTPClient := resty.New().
-		SetTimeout(5*time.Second).
-		SetHeader("Content-type", "application/json")
 
-	resp, err := HTTPClient.NewRequest().Post(hra.URL)
+	resp, err := hra.HTTPClient.NewRequest().SetBody(e).Post(hra.URL)
 	if err != nil {
 		return fmt.Errorf("ошибка выполнения http запроса: %w", err)
 	}
@@ -35,6 +38,6 @@ func (hra *HTTPRequestAuditHandler) handleAuditEvent(e Event) error {
 	return nil
 }
 
-func (hra *HTTPRequestAuditHandler) onEvent(e Event) error {
+func (hra *HTTPRequestAuditHandler) Handle(e Event) error {
 	return hra.handleAuditEvent(e)
 }
