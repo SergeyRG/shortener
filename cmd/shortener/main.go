@@ -1,15 +1,21 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"database/sql"
 
 	"github.com/SergeyRG/shortener/internal/config"
+	"github.com/SergeyRG/shortener/internal/events"
 	"github.com/SergeyRG/shortener/internal/handler"
 	"github.com/SergeyRG/shortener/internal/logging"
 	"github.com/SergeyRG/shortener/internal/middleware"
@@ -20,6 +26,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 )
 
 func main() {
@@ -29,6 +36,9 @@ func main() {
 }
 
 func run() error {
+	stopCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	cfg, err := config.NewConfig()
 	if err != nil {
 		log.Fatalf("ошибка валидации конфигурации: %s", err)
@@ -89,10 +99,26 @@ func run() error {
 		}
 	}
 
+	requestAuditor, err := initRequestAuditor(cfg)
+	if err != nil {
+		logger.Fatal("не удалось инициализировать аудит запросов", zap.Error(err))
+	}
+
+	if requestAuditor != nil {
+		requestAuditor.StartAuditTracking()
+	}
+
+	errg, ctx := errgroup.WithContext(stopCtx)
+
 	g := service.URLGenerator{}
 	svc := service.NewURLService(repo, cfg, g)
 
-	r := initRouter(svc, db, cfg)
+	errg.Go(func() error {
+		svc.StartDeleteWorker(ctx)
+		return nil
+	})
+
+	r := initRouter(svc, db, cfg, requestAuditor)
 	logger.Info("запуск приложения")
 
 	server := &http.Server{
@@ -103,15 +129,52 @@ func run() error {
 		ReadHeaderTimeout: 2 * time.Second,
 		IdleTimeout:       120 * time.Second,
 	}
+	errg.Go(func() error {
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			return fmt.Errorf("критическая ошибка HTTP-сервера: %w", err)
+		}
+		return nil
+	})
 
-	defer repo.Close()
-	return server.ListenAndServe()
+	errg.Go(func() error {
+		<-ctx.Done()
+		logger.Debug("начало остановки приложения")
+
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		if err := server.Shutdown(shutdownCtx); err != nil {
+			logger.Error("ошибка при остановке HTTP-сервера", zap.Error(err))
+		}
+
+		svc.Close()
+		return nil
+	})
+
+	if err := errg.Wait(); err != nil {
+		return fmt.Errorf("приложение завершилось с ошибкой: %w", err)
+	}
+
+	logger.Info("Приложение успешно остановлено")
+	return nil
+
 }
 
-func initRouter(svc service.URLServiceInterface, db *sql.DB, cfg config.Config) chi.Router {
-	rootHandler := handler.RootHandler(svc)
-	redirectHandler := handler.RedirectHandler(svc)
-	JSONShortenHandler := handler.JSONShortenHandler(svc)
+func initRouter(
+	svc service.URLServiceInterface,
+	db *sql.DB,
+	cfg config.Config,
+	ra *events.RequestAuditor,
+) chi.Router {
+	rootHandlerAuditable := handler.RootHandler(svc)
+	rootHandler := handler.WithAudit(ra, rootHandlerAuditable)
+
+	redirectHandlerAuditable := handler.RedirectHandler(svc)
+	redirectHandler := handler.WithAudit(ra, redirectHandlerAuditable)
+
+	JSONShortenHandlerAuditable := handler.JSONShortenHandler(svc)
+	JSONShortenHandler := handler.WithAudit(ra, JSONShortenHandlerAuditable)
+
 	DBPingHandler := handler.DBPingHandler(db)
 	BatchAddHandler := handler.BatchAddHandler(svc)
 	UserURLHandler := handler.UserURLHandler(svc)
@@ -135,4 +198,27 @@ func initRouter(svc service.URLServiceInterface, db *sql.DB, cfg config.Config) 
 		r.Delete("/api/user/urls", UserBatchDeleteHandler)
 	})
 	return r
+}
+
+func initRequestAuditor(cfg config.Config) (*events.RequestAuditor, error) {
+	if cfg.AuditFilePath == "" && cfg.AuditURL == "" {
+		return nil, nil
+	}
+
+	rt := events.NewRequestAuditTracker()
+
+	if cfg.AuditFilePath != "" {
+		fa, err := events.NewFileRequestAuditHandler(cfg.AuditFilePath)
+		if err != nil {
+			return nil, err
+		}
+		rt.Register(fa)
+	}
+	if cfg.AuditURL != "" {
+		ha := events.NewHTTPRequestAuditHandler(cfg.AuditURL)
+		rt.Register(ha)
+	}
+
+	ra := events.NewRequestAuditor(rt, make(chan events.Event, 1), time.Second*10)
+	return ra, nil
 }

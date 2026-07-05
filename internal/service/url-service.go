@@ -27,8 +27,14 @@ func NewURLService(r URLRepository, cfg config.Config, idGenerator ShortURLIDGen
 		idGenerator: idGenerator,
 		deleteCh:    make(chan model.DeleteTaskDto, 1),
 	}
-	go us.startDeleteWorker()
+
 	return us
+}
+
+func (u *URLService) Close() error {
+	err := u.repo.Close()
+	close(u.deleteCh)
+	return err
 }
 
 func (u *URLService) GetOriginalURLByID(ctx context.Context, id string) (model.ShortenModel, error) {
@@ -65,6 +71,8 @@ func (u *URLService) MakeShortURLByID(ctx context.Context, id string) (string, e
 	return res, nil
 }
 
+// AddShortURL метод выполняет основную функцию приложения - добавление короткого URl.
+// Если URL добавляется повторно, то возвращается короткий URL и ошибка ErrConflict.
 func (u *URLService) AddShortURL(ctx context.Context, url string, userID string) (string, error) {
 	var addition = ""
 	var id = ""
@@ -119,13 +127,18 @@ func (u *URLService) AddForDeleting(ctx context.Context, data model.DeleteTaskDt
 	u.deleteCh <- data
 }
 
-func (u *URLService) startDeleteWorker() {
+func (u *URLService) StartDeleteWorker(stopCtx context.Context) {
 	ticker := time.NewTicker(time.Second * 1)
 	defer ticker.Stop()
 	var buf []model.DeleteTaskDto
 
 	for {
 		select {
+		case <-stopCtx.Done():
+			if len(buf) > 0 {
+				u.repo.DeleteBatch(buf)
+			}
+			return
 		case task, ok := <-u.deleteCh:
 			if !ok {
 				if len(buf) > 0 {
@@ -150,6 +163,9 @@ func (u *URLService) startDeleteWorker() {
 type URLGenerator struct{}
 
 func (ug URLGenerator) CalculateShortURLID(url string) string {
-	var hash = sha256.Sum256([]byte(url))
-	return string([]byte(base32.StdEncoding.EncodeToString(hash[:]))[:8])
+	// оптимизация выделения памяти в куче
+	hash := sha256.Sum256([]byte(url))
+	var buf [8]byte
+	base32.StdEncoding.Encode(buf[:], hash[:5])
+	return string(buf[:])
 }

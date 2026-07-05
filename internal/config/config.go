@@ -35,26 +35,22 @@ func validateServerAddress(val string) error {
 	return nil
 }
 
-func validateBaseURL(val string) error {
+func validateURL(val string) error {
 	uParsed, err := url.ParseRequestURI(val)
 	if err != nil {
-		return fmt.Errorf("flag -b value must be in form http[s]://host:port, "+
-			"received: %s", val)
+		return fmt.Errorf("incorrect URL")
 	}
 
 	if uParsed.Scheme != "http" && uParsed.Scheme != "https" {
-		return fmt.Errorf("flag -b value must be in form http[s]://host:port, "+
-			"received: %s", val)
+		return fmt.Errorf("incorrect URL")
 	}
 
 	if uParsed.User != nil {
-		return fmt.Errorf("flag -b value must be in form http[s]://host:port, "+
-			"received: %s", val)
+		return fmt.Errorf("incorrect URL")
 	}
 
 	if uParsed.Path != "" {
-		return fmt.Errorf("flag -b value must be in form http[s]://host:port, "+
-			"received: %s", val)
+		return fmt.Errorf("incorrect URL")
 	}
 
 	if err := validatePortString(uParsed.Port()); err != nil {
@@ -70,6 +66,8 @@ type Config struct {
 	FileStoragePath     string
 	DBDSN               string
 	SecretKey           string
+	AuditFilePath       string
+	AuditURL            string
 }
 
 func NewConfig() (Config, error) {
@@ -89,6 +87,10 @@ func NewConfig() (Config, error) {
 	FileStoragePath := flag.String(
 		"f", binDir+"/file_storage.NDJSON", "base URL for short URLs")
 	DBDSN := flag.String("d", "", "DSN to connect to the database.")
+	AuditFilePath := flag.String(
+		"audit-file", "", "path to request audit file")
+	AuditURL := flag.String(
+		"audit-url", "", "URL for request audit")
 
 	flag.Parse()
 
@@ -109,13 +111,27 @@ func NewConfig() (Config, error) {
 	} else {
 		log.Printf("Используется ключ по умолчанию")
 	}
+	if val, exist := os.LookupEnv("AUDIT_FILE"); exist {
+		*AuditFilePath = val
+	}
+	if val, exist := os.LookupEnv("AUDIT_URL"); exist {
+		*AuditURL = val
+	}
 
 	if err := validateServerAddress(*ServerAddress); err != nil {
 		return Config{}, err
 	}
 
-	if err := validateBaseURL(*BaseShortURLAddress); err != nil {
-		return Config{}, err
+	if err := validateURL(*BaseShortURLAddress); err != nil {
+		return Config{}, fmt.Errorf("flag -b value must be in form http[s]://host:port, "+
+			"received: %s", *BaseShortURLAddress)
+	}
+
+	if *AuditURL != "" {
+		if err := validateURL(*AuditURL); err != nil {
+			return Config{}, fmt.Errorf("flag --audit-url value must be in form http[s]://host:port, "+
+				"received: %s", *AuditURL)
+		}
 	}
 
 	return Config{
@@ -124,6 +140,8 @@ func NewConfig() (Config, error) {
 			FileStoragePath:     *FileStoragePath,
 			DBDSN:               *DBDSN,
 			SecretKey:           *SecretKey,
+			AuditFilePath:       *AuditFilePath,
+			AuditURL:            *AuditURL,
 		},
 		nil
 }

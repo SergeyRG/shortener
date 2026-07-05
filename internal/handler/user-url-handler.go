@@ -18,6 +18,18 @@ type response struct {
 	Result string `json:"result"`
 }
 
+// UserURLHandler возвращает обработчик для получения коротких URL созданных
+// пользователем.
+//
+// Пользователь может получить, только короткие URL, ссозданный им.
+// В случае успеха, возвращается массив структур в виде json:
+//
+//	 [
+//			{
+//			"short_url":"DFFGFDSD"
+//			"original_url":"http://test.test"
+//			}
+//	 ]
 func UserURLHandler(svc service.URLServiceInterface) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		userID, ok := auth.UserIDFromContext(req.Context())

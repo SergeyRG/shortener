@@ -11,6 +11,10 @@ import (
 	"go.uber.org/zap"
 )
 
+// UserBatchDeleteHandler возвращает обработчик для удаления группы коротких URL
+//
+// Перечень коротких URL для удаления передается, как json массив.
+// Пользователь может удалить только свои URL.
 func UserBatchDeleteHandler(svc service.URLServiceInterface) http.HandlerFunc {
 	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		userID, ok := auth.UserIDFromContext(req.Context())
