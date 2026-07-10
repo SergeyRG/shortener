@@ -1,6 +1,6 @@
 package config
 
-func (s *Config) Reset(){
+func (s *Config) Reset() {
 	s.ServerAddress = ""
 	s.BaseShortURLAddress = ""
 	s.FileStoragePath = ""

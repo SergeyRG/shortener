@@ -1,6 +1,6 @@
 package model
 
-func (s *ShortenModel) Reset(){
+func (s *ShortenModel) Reset() {
 	s.ID = ""
 	s.OriginURL = ""
 	s.UserID = ""
