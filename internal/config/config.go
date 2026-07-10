@@ -60,6 +60,7 @@ func validateURL(val string) error {
 	return nil
 }
 
+// generate:reset
 type Config struct {
 	ServerAddress       string
 	BaseShortURLAddress string

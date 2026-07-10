@@ -5,6 +5,7 @@ type ShortenData struct {
 	OriginURL string
 }
 
+// generate:reset
 type ShortenModel struct {
 	ID          string
 	OriginURL   string
