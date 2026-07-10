@@ -1,6 +1,6 @@
 package repository
 
-func (s *InMemoryRepositoryURL) Reset() {
-	clear(s.stor)
-	s.filePath = ""
+func (r *InMemoryRepositoryURL) Reset(){
+	clear(r.stor)
+	r.filePath = ""
 }

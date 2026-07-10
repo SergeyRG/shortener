@@ -66,8 +66,11 @@ func generateSrcCodeForFile(fileAST *ast.File, typeInfo *types.Info, sb *strings
 				return true
 			}
 
+			typeObj := typeInfo.Defs[typeSpec.Name]
+			rn := determineReceiverName(typeObj.Type())
+
 			fmt.Printf("===+++ генерация метода Reset() для структуры %s +++=== \n", typeSpec.Name.Name)
-			if err := generateSrcCodeForStruct(structDecl, typeInfo, typeSpec.Name.Name, sb); err != nil {
+			if err := generateSrcCodeForStruct(structDecl, typeInfo, typeSpec.Name.Name, rn, sb); err != nil {
 				if !errors.Is(err, errNoContent) {
 					log.Fatalf("ошибка генерации кода: %v", err)
 				}
@@ -84,9 +87,15 @@ func generateSrcCodeForFile(fileAST *ast.File, typeInfo *types.Info, sb *strings
 	}
 }
 
-func generateSrcCodeForStruct(st *ast.StructType, typesInfo *types.Info, structName string, sb *strings.Builder) error {
+func generateSrcCodeForStruct(
+	st *ast.StructType,
+	typesInfo *types.Info,
+	structName string,
+	rn string,
+	sb *strings.Builder,
+) error {
 	var stSb strings.Builder
-	fmt.Fprintf(&stSb, "func (s *%s) Reset(){\n", structName)
+	fmt.Fprintf(&stSb, "func (%s *%s) Reset(){\n", rn, structName)
 	hasContent := false
 
 	for _, field := range st.Fields.List {
@@ -99,11 +108,11 @@ func generateSrcCodeForStruct(st *ast.StructType, typesInfo *types.Info, structN
 			fieldType := typeObj.Type()
 
 			if ptr, ok := fieldType.(*types.Pointer); ok {
-				if generateSrcCodeForPointers(ptr, "s."+fieldName, &stSb) {
+				if generateSrcCodeForPointers(ptr, rn+"."+fieldName, &stSb) {
 					hasContent = true
 				}
 			} else {
-				if generateSrcCodeForNonPointer(fieldType, "s."+fieldName, &stSb) {
+				if generateSrcCodeForNonPointer(fieldType, rn+"."+fieldName, &stSb) {
 					hasContent = true
 				}
 			}
@@ -179,6 +188,26 @@ func generateSrcCodeForNonPointer(t types.Type, accessPoint string, sb *strings.
 	default:
 		return false
 	}
+}
+
+func determineReceiverName(t types.Type) string {
+	named, ok := t.(*types.Named)
+	if !ok {
+		return "s"
+	}
+
+	if named.NumMethods() > 0 {
+		firstMethod := named.Method(0)
+
+		if sig, ok := firstMethod.Type().(*types.Signature); ok && sig.Recv() != nil {
+			rn := sig.Recv().Name()
+			if rn != "" {
+				return rn
+			}
+		}
+	}
+
+	return "s"
 }
 
 func hasResetMethod(t types.Type) bool {
