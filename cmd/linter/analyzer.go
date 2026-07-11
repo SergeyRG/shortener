@@ -8,7 +8,7 @@ import (
 
 var PanicCheckAnalyzer = &analysis.Analyzer{
 	Name: "panicCheck",
-	Doc:  "check for unchecked errors",
+	Doc:  "detects using panic. And log.Fatal, os.Exit usage outside of main.main",
 	Run:  run,
 }
 
