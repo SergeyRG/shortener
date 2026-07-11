@@ -43,17 +43,23 @@ func run(pass *analysis.Pass) (any, error) {
 		ast.Inspect(file, func(node ast.Node) bool {
 			var exprStmt *ast.ExprStmt
 			var call *ast.CallExpr
-			var ok bool
 
-			if funcDecl, ok := node.(*ast.FuncDecl); ok {
+			switch funcDecl := node.(type) {
+			case *ast.FuncDecl:
 				currentFunc = funcDecl
 			}
 
-			if exprStmt, ok = node.(*ast.ExprStmt); !ok {
+			switch t := node.(type) {
+			case *ast.ExprStmt:
+				exprStmt = t
+			default:
 				return true
 			}
 
-			if call, ok = exprStmt.X.(*ast.CallExpr); !ok {
+			switch t := exprStmt.X.(type) {
+			case *ast.CallExpr:
+				call = t
+			default:
 				return true
 			}
 

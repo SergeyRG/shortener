@@ -21,19 +21,26 @@ var errNoContent = errors.New("нет подходящих условий для
 func generateSrcCodeForPkg(pkg *packages.Package, sb *strings.Builder) error {
 	var hasContent = false
 	fmt.Fprintf(sb, "package %s\n\n", pkg.Name)
+	var genErr error = nil
 
 	for _, fileAST := range pkg.Syntax {
+		if genErr != nil {
+			break
+		}
 		fileObj := pkg.Fset.File(fileAST.Pos())
 		fileName := fileObj.Name()
 		fmt.Printf("Сканируем файл: %s \n", fileName)
 		err := generateSrcCodeForFile(fileAST, pkg.TypesInfo, sb)
 		if err != nil {
 			if !errors.Is(err, errNoContent) {
-				log.Fatalf("ошибка генерации кода: %v", err)
+				genErr = fmt.Errorf("ошибка генерации кода для пакета %s: %v", pkg.Name, err)
 			}
 		} else {
 			hasContent = true
 		}
+	}
+	if genErr != nil {
+		return genErr
 	}
 	if hasContent {
 		return nil
@@ -44,8 +51,12 @@ func generateSrcCodeForPkg(pkg *packages.Package, sb *strings.Builder) error {
 
 func generateSrcCodeForFile(fileAST *ast.File, typeInfo *types.Info, sb *strings.Builder) error {
 	hasContent := false
+	var genErr error = nil
 	ast.Inspect(fileAST, func(n ast.Node) bool {
 		if n == nil {
+			return true
+		}
+		if genErr != nil {
 			return true
 		}
 		genDecl, ok := n.(*ast.GenDecl)
@@ -72,7 +83,7 @@ func generateSrcCodeForFile(fileAST *ast.File, typeInfo *types.Info, sb *strings
 			fmt.Printf("===+++ генерация метода Reset() для структуры %s +++=== \n", typeSpec.Name.Name)
 			if err := generateSrcCodeForStruct(structDecl, typeInfo, typeSpec.Name.Name, rn, sb); err != nil {
 				if !errors.Is(err, errNoContent) {
-					log.Fatalf("ошибка генерации кода: %v", err)
+					genErr = fmt.Errorf("ошибка генерации кода для cnhernehs %s: %v", typeSpec.Name.Name, err)
 				}
 			} else {
 				hasContent = true
@@ -80,6 +91,9 @@ func generateSrcCodeForFile(fileAST *ast.File, typeInfo *types.Info, sb *strings
 		}
 		return true
 	})
+	if genErr != nil {
+		return genErr
+	}
 	if hasContent {
 		return nil
 	} else {
@@ -263,7 +277,10 @@ func writeSrcFile(sb *strings.Builder, filename string) error {
 }
 
 func main() {
-	root, _ := findProjectRoot()
+	root, err := findProjectRoot()
+	if err != nil {
+		log.Fatalf("не удалось определить корень проекта: %v", err)
+	}
 	cfg := &packages.Config{
 		Dir:   root,
 		Mode:  packages.NeedName | packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo,
@@ -311,7 +328,5 @@ func main() {
 		} else {
 			writeSrcFile(&sb, path.Join(pkg.Dir, "reset.gen.go"))
 		}
-
 	}
-
 }
