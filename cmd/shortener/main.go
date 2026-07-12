@@ -158,8 +158,7 @@ func run() error {
 			logger.Info("Запуск сервера в режиме HTTP")
 			ServerErr = server.ListenAndServe()
 		}
-
-		if ServerErr != nil && !errors.Is(err, http.ErrServerClosed) {
+		if ServerErr != nil && !errors.Is(ServerErr, http.ErrServerClosed) {
 			return fmt.Errorf("критическая ошибка HTTP-сервера: %w", ServerErr)
 		}
 		return nil
