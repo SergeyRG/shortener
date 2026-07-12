@@ -69,6 +69,7 @@ type Config struct {
 	SecretKey           string
 	AuditFilePath       string
 	AuditURL            string
+	EnableHTTPS         bool
 }
 
 func NewConfig() (Config, error) {
@@ -92,6 +93,8 @@ func NewConfig() (Config, error) {
 		"audit-file", "", "path to request audit file")
 	AuditURL := flag.String(
 		"audit-url", "", "URL for request audit")
+	EnableHTTPS := flag.Bool(
+		"s", false, "enable TLS")
 
 	flag.Parse()
 
@@ -118,6 +121,9 @@ func NewConfig() (Config, error) {
 	if val, exist := os.LookupEnv("AUDIT_URL"); exist {
 		*AuditURL = val
 	}
+	if _, exist := os.LookupEnv("ENABLE_HTTPS"); exist {
+		*EnableHTTPS = true
+	}
 
 	if err := validateServerAddress(*ServerAddress); err != nil {
 		return Config{}, err
@@ -143,6 +149,7 @@ func NewConfig() (Config, error) {
 			SecretKey:           *SecretKey,
 			AuditFilePath:       *AuditFilePath,
 			AuditURL:            *AuditURL,
+			EnableHTTPS:         *EnableHTTPS,
 		},
 		nil
 }

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path"
 	"syscall"
 	"time"
 
@@ -139,9 +140,27 @@ func run() error {
 		ReadHeaderTimeout: 2 * time.Second,
 		IdleTimeout:       120 * time.Second,
 	}
+
 	errg.Go(func() error {
-		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			return fmt.Errorf("критическая ошибка HTTP-сервера: %w", err)
+		var ServerErr error
+		if cfg.EnableHTTPS {
+			exePath, err := os.Executable()
+			exePath = path.Dir(exePath)
+			if err != nil {
+				logger.Fatal("не удалось определить местоположение исполняемого файла", zap.Error(err))
+			}
+			logger.Info("Запуск сервера в режиме HTTPS")
+			ServerErr = server.ListenAndServeTLS(
+				path.Join(exePath, "tls", "cert.pem"),
+				path.Join(exePath, "tls", "key.pem"),
+			)
+		} else {
+			logger.Info("Запуск сервера в режиме HTTP")
+			ServerErr = server.ListenAndServe()
+		}
+
+		if ServerErr != nil && !errors.Is(err, http.ErrServerClosed) {
+			return fmt.Errorf("критическая ошибка HTTP-сервера: %w", ServerErr)
 		}
 		return nil
 	})
