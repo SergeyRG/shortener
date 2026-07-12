@@ -12,6 +12,7 @@ import (
 
 var ErrNilDB = errors.New("DB cant be nil")
 
+// generate:reset
 type PSQLDBRepositoryURL struct {
 	stor *sql.DB
 }

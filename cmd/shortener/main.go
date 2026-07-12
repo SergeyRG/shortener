@@ -29,6 +29,12 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+var (
+	buildVersion = "N/A"
+	buildDate    = "N/A"
+	buildCommit  = "N/A"
+)
+
 func main() {
 	if err := run(); err != nil {
 		log.Fatalf("ошибка запуска приложения: %v", err)
@@ -36,6 +42,10 @@ func main() {
 }
 
 func run() error {
+	fmt.Println("Build version:", buildVersion)
+	fmt.Println("Build date:", buildDate)
+	fmt.Println("Build commit:", buildCommit)
+
 	stopCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 

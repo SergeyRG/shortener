@@ -10,6 +10,7 @@ import (
 	"github.com/SergeyRG/shortener/internal/model"
 )
 
+// generate:reset
 type InMemoryRepositoryURL struct {
 	stor     map[string]*model.ShortenModel
 	filePath string
