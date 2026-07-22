@@ -92,8 +92,8 @@ func NewConfig() (Config, error) {
 	AuditFilePath := flag.String("audit-file", "", "path to request audit file")
 	AuditURL := flag.String("audit-url", "", "URL for request audit")
 	EnableHTTPS := flag.Bool("s", false, "enable TLS")
-	flag.StringVar(&configPath, "c", "", "enable TLS")
-	flag.StringVar(&configPath, "config", "", "enable TLS")
+	flag.StringVar(&configPath, "c", "", "path to config file")
+	flag.StringVar(&configPath, "config", "", "path to config file")
 
 	flag.Parse()
 

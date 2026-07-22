@@ -58,10 +58,10 @@ func run() error {
 
 	cfg, err := config.NewConfig()
 	if err != nil {
-		log.Fatalf("ошибка валидации конфигурации: %s", err)
+		return fmt.Errorf("ошибка валидации конфигурации: %s", err)
 	}
 	if err := logging.Initialize("debug"); err != nil {
-		log.Fatalf("ошибка инициализации системы логирования: %s", err)
+		return fmt.Errorf("ошибка инициализации системы логирования: %s", err)
 	}
 
 	logger := logging.Logger
@@ -73,7 +73,7 @@ func run() error {
 	if cfg.DBDSN == "" {
 		fileStore, err := os.OpenFile(cfg.FileStoragePath, os.O_RDWR|os.O_CREATE, 0644)
 		if err != nil {
-			logger.Fatal("не удалось открыть/создать файл", zap.Error(err))
+			return fmt.Errorf("не удалось открыть/создать файл: %v", err)
 		}
 
 		decoder := json.NewDecoder(fileStore)
@@ -95,30 +95,29 @@ func run() error {
 
 		repo, err = repository.NewInMemoryRepositoryURL(stor, cfg.FileStoragePath)
 		if err != nil {
-			logger.Fatal("не удалось создать объект репозиториия", zap.Error(err))
+			return fmt.Errorf("не удалось создать объект репозиториия: %v", err)
 		}
 	} else {
 		var err error
 		db, err = sql.Open("pgx", cfg.DBDSN)
 		if err != nil {
-			logger.Fatal("не удалось подключиться к БД", zap.Error(err),
-				zap.String("DSN", cfg.DBDSN))
+			return fmt.Errorf("не удалось подключиться к БД: %v, DBDSN: %s", err, cfg.DBDSN)
 		}
 
 		defer db.Close()
 		repo, err = repository.NewPSQLDBRepositoryURL(db)
 		if err != nil {
-			logger.Fatal("не удалось инициализировать репозиторий", zap.Error(err))
+			return fmt.Errorf("не удалось инициализировать репозиторий: %v", err)
 		}
 		err = migrations.RunMigrations(db)
 		if err != nil {
-			logger.Fatal("не удалось мигрировать БД", zap.Error(err))
+			return fmt.Errorf("не удалось мигрировать БД: %v", err)
 		}
 	}
 
 	requestAuditor, err := initRequestAuditor(cfg)
 	if err != nil {
-		logger.Fatal("не удалось инициализировать аудит запросов", zap.Error(err))
+		return fmt.Errorf("не удалось инициализировать аудит запросов: %v", err)
 	}
 
 	if requestAuditor != nil {
@@ -153,7 +152,7 @@ func run() error {
 			exePath, err := os.Executable()
 			exePath = path.Dir(exePath)
 			if err != nil {
-				logger.Fatal("не удалось определить местоположение исполняемого файла", zap.Error(err))
+				return fmt.Errorf("не удалось определить местоположение исполняемого файла: %v", err)
 			}
 			logger.Info("Запуск сервера в режиме HTTPS")
 			ServerErr = server.ListenAndServeTLS(
