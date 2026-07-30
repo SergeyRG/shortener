@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -156,8 +157,8 @@ func run() error {
 			}
 			logger.Info("Запуск сервера в режиме HTTPS")
 			ServerErr = server.ListenAndServeTLS(
-				path.Join(exePath, "tls", "cert.pem"),
-				path.Join(exePath, "tls", "key.pem"),
+				filepath.Join(exePath, "tls", "cert.pem"),
+				filepath.Join(exePath, "tls", "key.pem"),
 			)
 		} else {
 			logger.Info("Запуск сервера в режиме HTTP")
@@ -212,6 +213,7 @@ func initRouter(
 	BatchAddHandler := handler.BatchAddHandler(svc)
 	UserURLHandler := handler.UserURLHandler(svc)
 	UserBatchDeleteHandler := handler.UserBatchDeleteHandler(svc)
+	StatsHandler := handler.StatsHandler(svc)
 
 	authMiddleware := middleware.Auth(cfg)
 
@@ -229,6 +231,7 @@ func initRouter(
 		r.Post("/api/shorten/batch", BatchAddHandler)
 		r.Get("/api/user/urls", UserURLHandler)
 		r.Delete("/api/user/urls", UserBatchDeleteHandler)
+		r.With(middleware.ForTrustedSubnet(cfg)).Get("/api/internal/stats", StatsHandler)
 	})
 	return r
 }
