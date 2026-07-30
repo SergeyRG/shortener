@@ -29,4 +29,6 @@ type URLServiceInterface interface {
 	AddBatch(ctx context.Context, data []BatchDataRequest, userID string) ([]BatchDataResponse, error)
 	GetURLByUserID(ctx context.Context, userID string) (url []UserURLData, err error)
 	AddForDeleting(ctx context.Context, data model.DeleteTaskDto)
+	GetURLSCount(ctx context.Context) (int, error)
+	GetUsersCount(ctx context.Context) (int, error)
 }

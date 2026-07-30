@@ -14,5 +14,7 @@ type URLRepository interface {
 	Delete(ctx context.Context, id string) error
 	AddBatch(ctx context.Context, data []model.ShortenData, userID string) error
 	DeleteBatch(data []model.DeleteTaskDto) error
+	GetURLSCount(ctx context.Context) (int, error)
+	GetUsersCount(ctx context.Context) (int, error)
 	Close() error
 }

@@ -125,3 +125,33 @@ func (r *InMemoryRepositoryURL) DeleteBatch(data []model.DeleteTaskDto) error {
 func (r *InMemoryRepositoryURL) Close() error {
 	return r.file.Close()
 }
+
+func (r *InMemoryRepositoryURL) GetURLSCount(ctx context.Context) (int, error) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	select {
+	case <-ctx.Done():
+		return 0, ctx.Err()
+	default:
+		return len(r.stor), nil
+	}
+}
+
+func (r *InMemoryRepositoryURL) GetUsersCount(ctx context.Context) (int, error) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	count := 0
+	alreadyСounted := make(map[string]bool, len(r.stor))
+	for _, v := range r.stor {
+		select {
+		case <-ctx.Done():
+			return 0, ctx.Err()
+		default:
+			if !alreadyСounted[v.UserID] {
+				count++
+				alreadyСounted[v.UserID] = true
+			}
+		}
+	}
+	return count, nil
+}

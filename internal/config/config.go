@@ -71,6 +71,7 @@ type Config struct {
 	AuditFilePath       string `json:"-"`
 	AuditURL            string `json:"-"`
 	EnableHTTPS         bool   `json:"enable_https"`
+	TrustedSubnet       string `json:"trusted_subnet"`
 }
 
 func NewConfig() (Config, error) {
@@ -81,8 +82,6 @@ func NewConfig() (Config, error) {
 	defKey := string("DEFAULT_SECRET_KEY")
 	SecretKey := &defKey
 
-	configPath := ""
-
 	binDir := filepath.Dir(binPath)
 
 	ServerAddress := flag.String("a", ":8080", "address and port to run server")
@@ -92,18 +91,19 @@ func NewConfig() (Config, error) {
 	AuditFilePath := flag.String("audit-file", "", "path to request audit file")
 	AuditURL := flag.String("audit-url", "", "URL for request audit")
 	EnableHTTPS := flag.Bool("s", false, "enable TLS")
-	flag.StringVar(&configPath, "c", "", "path to config file")
-	flag.StringVar(&configPath, "config", "", "path to config file")
+	configPath := flag.String("c", "", "path to config file")
+	flag.StringVar(configPath, "config", "", "path to config file")
+	trustedSubnet := flag.String("t", "", "CIDR доверенной сети")
 
 	flag.Parse()
 
 	if val, exist := os.LookupEnv("CONFIG"); exist {
-		configPath = val
+		*configPath = val
 	}
 
-	if configPath != "" {
+	if *configPath != "" {
 		cfg := Config{}
-		fileCFG, err := os.ReadFile(configPath)
+		fileCFG, err := os.ReadFile(*configPath)
 		if err != nil {
 			return Config{}, fmt.Errorf("ошибка чтения файла конфигурации: %v", err)
 		}
@@ -113,39 +113,30 @@ func NewConfig() (Config, error) {
 			return Config{}, fmt.Errorf("ошибка разбора файла конфигурации: %v", err)
 		}
 
-		flagsSet := make(map[string]bool)
-		flag.VisitAll(func(f *flag.Flag) {
-			flagsSet[f.Name] = false
-		})
-
+		userFlags := make(map[string]bool)
 		flag.Visit(func(f *flag.Flag) {
-			flagsSet[f.Name] = true
+			userFlags[f.Name] = true
 		})
 
-		for flagName, present := range flagsSet {
-			if !present {
-				switch flagName {
-				case "a":
-					if cfg.ServerAddress != "" {
-						*ServerAddress = cfg.ServerAddress
-					}
-				case "b":
-					if cfg.BaseShortURLAddress != "" {
-						*BaseShortURLAddress = cfg.BaseShortURLAddress
-					}
-				case "f":
-					if cfg.FileStoragePath != "" {
-						*FileStoragePath = cfg.FileStoragePath
-					}
-				case "d":
-					if cfg.DBDSN != "" {
-						*DBDSN = cfg.DBDSN
-					}
-				case "s":
-					*EnableHTTPS = cfg.EnableHTTPS
-				}
-			}
+		if !userFlags["a"] && cfg.ServerAddress != "" {
+			*ServerAddress = cfg.ServerAddress
 		}
+		if !userFlags["b"] && cfg.BaseShortURLAddress != "" {
+			*BaseShortURLAddress = cfg.BaseShortURLAddress
+		}
+		if !userFlags["f"] && cfg.FileStoragePath != "" {
+			*FileStoragePath = cfg.FileStoragePath
+		}
+		if !userFlags["d"] && cfg.DBDSN != "" {
+			*DBDSN = cfg.DBDSN
+		}
+		if !userFlags["s"] {
+			*EnableHTTPS = cfg.EnableHTTPS
+		}
+		if !userFlags["t"] && cfg.TrustedSubnet != "" {
+			*trustedSubnet = cfg.TrustedSubnet
+		}
+
 	}
 
 	if val, exist := os.LookupEnv("SERVER_ADDRESS"); exist {
@@ -174,6 +165,9 @@ func NewConfig() (Config, error) {
 	if _, exist := os.LookupEnv("ENABLE_HTTPS"); exist {
 		*EnableHTTPS = true
 	}
+	if val, exist := os.LookupEnv("TRUSTED_SUBNET"); exist {
+		*trustedSubnet = val
+	}
 
 	if err := validateServerAddress(*ServerAddress); err != nil {
 		return Config{}, err
@@ -200,6 +194,7 @@ func NewConfig() (Config, error) {
 			AuditFilePath:       *AuditFilePath,
 			AuditURL:            *AuditURL,
 			EnableHTTPS:         *EnableHTTPS,
+			TrustedSubnet:       *trustedSubnet,
 		},
 		nil
 }
