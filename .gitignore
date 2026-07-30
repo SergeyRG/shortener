@@ -9,6 +9,9 @@ __debug_bin*
 # Test binary, built with `go test -c`
 *.test
 
+# TLS keys
+*.pem
+
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
@@ -18,7 +21,7 @@ cmd/shortener/shortener
 
 # Local storage file
 cmd/shortener/file_storage.NDJSON
-cmd/shortener/audit_test.txt
+cmd/shortener/*_test.txt
 
 # Dependency directories (remove the comment below to include it)
 vendor/

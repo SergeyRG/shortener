@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -62,13 +63,14 @@ func validateURL(val string) error {
 
 // generate:reset
 type Config struct {
-	ServerAddress       string
-	BaseShortURLAddress string
-	FileStoragePath     string
-	DBDSN               string
-	SecretKey           string
-	AuditFilePath       string
-	AuditURL            string
+	ServerAddress       string `json:"server_address"`
+	BaseShortURLAddress string `json:"base_url"`
+	FileStoragePath     string `json:"file_storage_path"`
+	DBDSN               string `json:"database_dsn"`
+	SecretKey           string `json:"-"`
+	AuditFilePath       string `json:"-"`
+	AuditURL            string `json:"-"`
+	EnableHTTPS         bool   `json:"enable_https"`
 }
 
 func NewConfig() (Config, error) {
@@ -79,21 +81,72 @@ func NewConfig() (Config, error) {
 	defKey := string("DEFAULT_SECRET_KEY")
 	SecretKey := &defKey
 
+	configPath := ""
+
 	binDir := filepath.Dir(binPath)
 
-	ServerAddress := flag.String(
-		"a", ":8080", "address and port to run server")
-	BaseShortURLAddress := flag.String(
-		"b", "http://localhost:8080", "base URL for short URLs")
-	FileStoragePath := flag.String(
-		"f", binDir+"/file_storage.NDJSON", "base URL for short URLs")
+	ServerAddress := flag.String("a", ":8080", "address and port to run server")
+	BaseShortURLAddress := flag.String("b", "http://localhost:8080", "base URL for short URLs")
+	FileStoragePath := flag.String("f", binDir+"/file_storage.NDJSON", "base URL for short URLs")
 	DBDSN := flag.String("d", "", "DSN to connect to the database.")
-	AuditFilePath := flag.String(
-		"audit-file", "", "path to request audit file")
-	AuditURL := flag.String(
-		"audit-url", "", "URL for request audit")
+	AuditFilePath := flag.String("audit-file", "", "path to request audit file")
+	AuditURL := flag.String("audit-url", "", "URL for request audit")
+	EnableHTTPS := flag.Bool("s", false, "enable TLS")
+	flag.StringVar(&configPath, "c", "", "path to config file")
+	flag.StringVar(&configPath, "config", "", "path to config file")
 
 	flag.Parse()
+
+	if val, exist := os.LookupEnv("CONFIG"); exist {
+		configPath = val
+	}
+
+	if configPath != "" {
+		cfg := Config{}
+		fileCFG, err := os.ReadFile(configPath)
+		if err != nil {
+			return Config{}, fmt.Errorf("ошибка чтения файла конфигурации: %v", err)
+		}
+
+		err = json.Unmarshal(fileCFG, &cfg)
+		if err != nil {
+			return Config{}, fmt.Errorf("ошибка разбора файла конфигурации: %v", err)
+		}
+
+		flagsSet := make(map[string]bool)
+		flag.VisitAll(func(f *flag.Flag) {
+			flagsSet[f.Name] = false
+		})
+
+		flag.Visit(func(f *flag.Flag) {
+			flagsSet[f.Name] = true
+		})
+
+		for flagName, present := range flagsSet {
+			if !present {
+				switch flagName {
+				case "a":
+					if cfg.ServerAddress != "" {
+						*ServerAddress = cfg.ServerAddress
+					}
+				case "b":
+					if cfg.BaseShortURLAddress != "" {
+						*BaseShortURLAddress = cfg.BaseShortURLAddress
+					}
+				case "f":
+					if cfg.FileStoragePath != "" {
+						*FileStoragePath = cfg.FileStoragePath
+					}
+				case "d":
+					if cfg.DBDSN != "" {
+						*DBDSN = cfg.DBDSN
+					}
+				case "s":
+					*EnableHTTPS = cfg.EnableHTTPS
+				}
+			}
+		}
+	}
 
 	if val, exist := os.LookupEnv("SERVER_ADDRESS"); exist {
 		*ServerAddress = val
@@ -117,6 +170,9 @@ func NewConfig() (Config, error) {
 	}
 	if val, exist := os.LookupEnv("AUDIT_URL"); exist {
 		*AuditURL = val
+	}
+	if _, exist := os.LookupEnv("ENABLE_HTTPS"); exist {
+		*EnableHTTPS = true
 	}
 
 	if err := validateServerAddress(*ServerAddress); err != nil {
@@ -143,6 +199,7 @@ func NewConfig() (Config, error) {
 			SecretKey:           *SecretKey,
 			AuditFilePath:       *AuditFilePath,
 			AuditURL:            *AuditURL,
+			EnableHTTPS:         *EnableHTTPS,
 		},
 		nil
 }
