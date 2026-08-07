@@ -20,7 +20,7 @@ import (
 	pb "github.com/SergeyRG/shortener/api/proto/shortener/v1"
 	"github.com/SergeyRG/shortener/internal/config"
 	"github.com/SergeyRG/shortener/internal/events"
-	"github.com/SergeyRG/shortener/internal/grpc_server"
+	"github.com/SergeyRG/shortener/internal/grpcserver"
 	"github.com/SergeyRG/shortener/internal/handler"
 	"github.com/SergeyRG/shortener/internal/logging"
 	"github.com/SergeyRG/shortener/internal/middleware"
@@ -145,8 +145,8 @@ func run() error {
 	if err != nil {
 		logger.Fatal("failed to open tcp port", zap.Error(err))
 	}
-	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(grpc_server.NewAuthInterceptor(cfg)))
-	shortenerService := &grpc_server.ShortenerService{
+	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(grpcserver.NewAuthInterceptor(cfg)))
+	shortenerService := &grpcserver.ShortenerService{
 		SVC: svc,
 	}
 	pb.RegisterShortenerServiceServer(grpcServer, shortenerService)
