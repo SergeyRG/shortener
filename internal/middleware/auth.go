@@ -15,46 +15,36 @@ func Auth(cfg config.Config) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 			l := logging.Logger
 			cookieToken, err := r.Cookie("auth_token")
+
 			var tokenString string
-			var userID string
-			newTokenRequired := false
+
+			if err != nil && !errors.Is(err, http.ErrNoCookie) {
+				l.Error("cant get value from cookies", zap.Error(err))
+				rw.WriteHeader(http.StatusInternalServerError)
+				return
+			}
 
 			if err == nil {
 				tokenString = cookieToken.Value
-				userID, err = auth.ValidateAndParseJWTAuthToken(tokenString, []byte(cfg.SecretKey))
 			}
 
-			if err != nil {
-				newTokenRequired = errors.Is(err, http.ErrNoCookie) ||
-					errors.Is(err, auth.ErrUnexpectedSigningMethod) ||
-					errors.Is(err, auth.ErrTokenIsNotValid)
+			userID, err := auth.ProccessToken(tokenString, []byte(cfg.SecretKey))
 
-				if !newTokenRequired {
-					l.Error("cant validate auth token", zap.Error(err))
-					rw.WriteHeader(http.StatusInternalServerError)
-					return
-				}
-			}
-
-			if newTokenRequired {
-				userID, err = auth.GenerateUserID()
-				if err != nil {
-					l.Error("cant create user ID", zap.Error(err))
-					rw.WriteHeader(http.StatusInternalServerError)
-					return
-				}
-				tokenString, err = auth.GenerateJWTAuthToken(userID, []byte(cfg.SecretKey))
-				if err != nil {
-					l.Error("cant create auth token", zap.Error(err))
-					rw.WriteHeader(http.StatusInternalServerError)
-					return
-				}
+			var e *auth.ErrNewTokenRequerd
+			if errors.As(err, &e) {
 				http.SetCookie(rw, &http.Cookie{
 					Name:     "auth_token",
-					Value:    tokenString,
+					Value:    e.NewToken,
 					Path:     "/",
 					HttpOnly: true,
 				})
+				err = nil
+			}
+
+			if err != nil {
+				l.Error("auth error", zap.Error(err))
+				rw.WriteHeader(http.StatusInternalServerError)
+				return
 			}
 
 			if userID == "" {

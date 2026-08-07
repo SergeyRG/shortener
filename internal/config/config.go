@@ -64,6 +64,7 @@ func validateURL(val string) error {
 // generate:reset
 type Config struct {
 	ServerAddress       string `json:"server_address"`
+	GRPCServerAddress   string `json:"grpc_server_address"`
 	BaseShortURLAddress string `json:"base_url"`
 	FileStoragePath     string `json:"file_storage_path"`
 	DBDSN               string `json:"database_dsn"`
@@ -85,6 +86,7 @@ func NewConfig() (Config, error) {
 	binDir := filepath.Dir(binPath)
 
 	ServerAddress := flag.String("a", ":8080", "address and port to run server")
+	GRPCServerAddress := flag.String("g", ":50051", "address and port to run grpc server")
 	BaseShortURLAddress := flag.String("b", "http://localhost:8080", "base URL for short URLs")
 	FileStoragePath := flag.String("f", binDir+"/file_storage.NDJSON", "base URL for short URLs")
 	DBDSN := flag.String("d", "", "DSN to connect to the database.")
@@ -187,6 +189,7 @@ func NewConfig() (Config, error) {
 
 	return Config{
 			ServerAddress:       *ServerAddress,
+			GRPCServerAddress:   *GRPCServerAddress,
 			BaseShortURLAddress: *BaseShortURLAddress,
 			FileStoragePath:     *FileStoragePath,
 			DBDSN:               *DBDSN,

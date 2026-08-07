@@ -32,7 +32,7 @@ func JSONShortenHandler(svc service.URLServiceInterface) AuditableHandler {
 		userID, ok := auth.UserIDFromContext(req.Context())
 		if !ok {
 			logging.Logger.Error("cant get user id")
-			rw.WriteHeader(http.StatusInternalServerError)
+			rw.WriteHeader(http.StatusUnauthorized)
 			return nil
 		}
 

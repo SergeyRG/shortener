@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -16,8 +17,10 @@ import (
 
 	"database/sql"
 
+	pb "github.com/SergeyRG/shortener/api/proto/shortener/v1"
 	"github.com/SergeyRG/shortener/internal/config"
 	"github.com/SergeyRG/shortener/internal/events"
+	"github.com/SergeyRG/shortener/internal/grpc_server"
 	"github.com/SergeyRG/shortener/internal/handler"
 	"github.com/SergeyRG/shortener/internal/logging"
 	"github.com/SergeyRG/shortener/internal/middleware"
@@ -29,6 +32,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
 )
 
 var (
@@ -136,7 +140,16 @@ func run() error {
 	})
 
 	r := initRouter(svc, db, cfg, requestAuditor)
-	logger.Info("запуск приложения")
+
+	listener, err := net.Listen("tcp", cfg.GRPCServerAddress)
+	if err != nil {
+		logger.Fatal("failed to open tcp port", zap.Error(err))
+	}
+	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(grpc_server.NewAuthInterceptor(cfg)))
+	shortenerService := &grpc_server.ShortenerService{
+		SVC: svc,
+	}
+	pb.RegisterShortenerServiceServer(grpcServer, shortenerService)
 
 	server := &http.Server{
 		Addr:              cfg.ServerAddress,
@@ -146,6 +159,8 @@ func run() error {
 		ReadHeaderTimeout: 2 * time.Second,
 		IdleTimeout:       120 * time.Second,
 	}
+	logger.Info("запуск приложения")
+	logger.Info("запуск Http сервера")
 
 	errg.Go(func() error {
 		var ServerErr error
@@ -170,6 +185,14 @@ func run() error {
 		return nil
 	})
 
+	logger.Info("запуск grpc сервера")
+	errg.Go(func() error {
+		if err := grpcServer.Serve(listener); err != nil {
+			return fmt.Errorf("критическая ошибка GRPC-сервера: %w", err)
+		}
+		return nil
+	})
+
 	errg.Go(func() error {
 		<-ctx.Done()
 		logger.Debug("начало остановки приложения")
@@ -180,6 +203,8 @@ func run() error {
 		if err := server.Shutdown(shutdownCtx); err != nil {
 			logger.Error("ошибка при остановке HTTP-сервера", zap.Error(err))
 		}
+
+		grpcServer.GracefulStop()
 
 		svc.Close()
 		return nil
