@@ -15,16 +15,15 @@ import (
 )
 
 func NewAuthInterceptor(cfg config.Config) grpc.UnaryServerInterceptor {
+	publicMethods := map[string]bool{
+		"/shortener.v1.ShortenerService/ExpandURL": true,
+	}
 	return func(
 		ctx context.Context,
 		req any,
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
 	) (any, error) {
-		publicMethods := map[string]bool{
-			"/shortener.v1.ShortenerService/ExpandURL": true,
-		}
-
 		if publicMethods[info.FullMethod] {
 			return handler(ctx, req)
 		}
@@ -37,7 +36,7 @@ func NewAuthInterceptor(cfg config.Config) grpc.UnaryServerInterceptor {
 			md = md.Copy()
 		}
 
-		jwt, exist := md["auth_token"]
+		jwt, exist := md["authorization"]
 		if exist && len(jwt) > 0 {
 			tokenString = jwt[0]
 		}
@@ -46,14 +45,14 @@ func NewAuthInterceptor(cfg config.Config) grpc.UnaryServerInterceptor {
 
 		var e auth.ErrNewTokenRequerd
 		if errors.As(err, &e) {
-			authMD := metadata.Pairs("auth_token", e.NewToken)
+			authMD := metadata.Pairs("authorization", e.NewToken)
 			grpc.SetHeader(ctx, authMD)
 			err = nil
 		}
 
 		if err != nil {
 			logging.Logger.Error("auth error", zap.Error(err))
-			return nil, status.Error(codes.Internal, err.Error())
+			return nil, status.Error(codes.Internal, "authentication error")
 		}
 
 		if userID == "" {

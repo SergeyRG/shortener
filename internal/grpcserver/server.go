@@ -12,12 +12,15 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type ShortenerService struct {
 	pb.UnimplementedShortenerServiceServer
-	SVC *service.URLService
+	svc service.URLServiceInterface
+}
+
+func NewShortenerService(svc service.URLServiceInterface) *ShortenerService {
+	return &ShortenerService{svc: svc}
 }
 
 func (s *ShortenerService) ShortenURL(
@@ -30,7 +33,7 @@ func (s *ShortenerService) ShortenURL(
 	}
 
 	url := in.GetUrl()
-	id, err := s.SVC.AddShortURL(context.Background(), url, userID)
+	id, err := s.svc.AddShortURL(ctx, url, userID)
 	if err != nil && !errors.Is(err, service.ErrConflict) {
 		logging.Logger.Error("cant add short URL", zap.Error(err))
 		return nil, status.Error(codes.Internal, "cant add short URL")
@@ -38,7 +41,7 @@ func (s *ShortenerService) ShortenURL(
 
 	isErrConflict := errors.Is(err, service.ErrConflict)
 
-	shortURL, err := s.SVC.MakeShortURLByID(context.Background(), id)
+	shortURL, err := s.svc.MakeShortURLByID(ctx, id)
 	if err != nil {
 		logging.Logger.Error("cant make short URL", zap.Error(err))
 		return nil, status.Error(codes.Internal, "cant make short URL")
@@ -75,7 +78,7 @@ func (s *ShortenerService) ExpandURL(
 	in *pb.URLExpandRequest) (*pb.URLExpandResponse, error) {
 
 	id := in.GetId()
-	url, err := s.SVC.GetOriginalURLByID(ctx, id)
+	url, err := s.svc.GetOriginalURLByID(ctx, id)
 
 	if err != nil {
 		logging.Logger.Error("cant get original URL by ID", zap.Error(err))
@@ -83,8 +86,8 @@ func (s *ShortenerService) ExpandURL(
 	}
 
 	if url.DeletedFlag {
-		logging.Logger.Error("original URL is deleted", zap.Error(err))
-		return nil, status.Error(codes.InvalidArgument, "original URL is deleted")
+		logging.Logger.Error("original URL is deleted")
+		return nil, status.Error(codes.NotFound, "original URL is deleted")
 	}
 
 	return pb.URLExpandResponse_builder{
@@ -94,13 +97,13 @@ func (s *ShortenerService) ExpandURL(
 
 func (s *ShortenerService) ListUserURLs(
 	ctx context.Context,
-	in *emptypb.Empty) (*pb.UserURLsResponse, error) {
+	in *pb.ListUserURLsRequest) (*pb.UserURLsResponse, error) {
 	userID, ok := auth.UserIDFromContext(ctx)
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "Unauthenticated")
 	}
 
-	userURL, err := s.SVC.GetURLByUserID(ctx, userID)
+	userURL, err := s.svc.GetURLByUserID(ctx, userID)
 	if err != nil {
 		logging.Logger.Error("cant get user URLs", zap.Error(err))
 		return nil, status.Error(codes.Internal, "cant get user URLs")

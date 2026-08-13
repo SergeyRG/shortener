@@ -33,6 +33,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 var (
@@ -143,12 +144,29 @@ func run() error {
 
 	listener, err := net.Listen("tcp", cfg.GRPCServerAddress)
 	if err != nil {
-		logger.Fatal("failed to open tcp port", zap.Error(err))
+		return fmt.Errorf("ошибка чтения tcp порта: %v", err)
 	}
-	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(grpcserver.NewAuthInterceptor(cfg)))
-	shortenerService := &grpcserver.ShortenerService{
-		SVC: svc,
+
+	var opts []grpc.ServerOption
+	if cfg.EnableGRPCTLS {
+		exePath, err := os.Executable()
+		exePath = path.Dir(exePath)
+		creds, err := credentials.NewServerTLSFromFile(
+			filepath.Join(exePath, "tls", "cert.pem"),
+			filepath.Join(exePath, "tls", "key.pem"),
+		)
+		if err != nil {
+			return fmt.Errorf("Ошибка загрузки сертификатов: %v", err)
+		}
+		opts = append(opts, grpc.Creds(creds))
 	}
+
+	opts = append(opts, grpc.UnaryInterceptor(grpcserver.NewAuthInterceptor(cfg)))
+
+	grpcServer := grpc.NewServer(opts...)
+
+	shortenerService := grpcserver.NewShortenerService(svc)
+
 	pb.RegisterShortenerServiceServer(grpcServer, shortenerService)
 
 	server := &http.Server{

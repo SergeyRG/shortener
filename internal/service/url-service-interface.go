@@ -21,7 +21,7 @@ type UserURLData struct {
 	OriginalURL string `json:"original_url"`
 }
 
-//go:generate mockgen -destination=mocks/mock-url-service.go -package=mocks . URLServiceInterface
+//go:generate mockgen -destination=mocks/mock-url-service.gen.go -package=mocks . URLServiceInterface
 type URLServiceInterface interface {
 	GetOriginalURLByID(ctx context.Context, id string) (url model.ShortenModel, err error)
 	AddShortURL(ctx context.Context, url string, userID string) (id string, err error)

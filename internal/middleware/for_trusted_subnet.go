@@ -26,7 +26,9 @@ func ForTrustedSubnet(cfg config.Config) func(http.Handler) http.Handler {
 
 			_, trustedSubnet, err := net.ParseCIDR(cfg.TrustedSubnet)
 			if err != nil {
-				l.Error("ошибка разбора ip адреса переданного в заголовке 'X-real-ip'", zap.Error(err))
+				l.Error("ошибка разбора адреса доверенной сети", zap.Error(err))
+				rw.WriteHeader(http.StatusInternalServerError)
+				return
 			}
 
 			if !trustedSubnet.Contains(net.ParseIP(realIP)) {

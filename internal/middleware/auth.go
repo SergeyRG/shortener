@@ -30,7 +30,7 @@ func Auth(cfg config.Config) func(http.Handler) http.Handler {
 
 			userID, err := auth.ProccessToken(tokenString, []byte(cfg.SecretKey))
 
-			var e *auth.ErrNewTokenRequerd
+			var e auth.ErrNewTokenRequerd
 			if errors.As(err, &e) {
 				http.SetCookie(rw, &http.Cookie{
 					Name:     "auth_token",
