@@ -150,6 +150,9 @@ func run() error {
 	var opts []grpc.ServerOption
 	if cfg.EnableGRPCTLS {
 		exePath, err := os.Executable()
+		if err != nil {
+			return fmt.Errorf("ошибка опеределния пути к исполняемому файлу: %v", err)
+		}
 		exePath = path.Dir(exePath)
 		creds, err := credentials.NewServerTLSFromFile(
 			filepath.Join(exePath, "tls", "cert.pem"),
