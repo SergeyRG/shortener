@@ -10,6 +10,17 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 )
 
+type ErrNewTokenRequerd struct {
+	NewToken string
+}
+
+func (e ErrNewTokenRequerd) Error() string {
+	return "new token requerd"
+}
+
+var ErrUnexpectedSigningMethod = errors.New("unexpected signing method")
+var ErrTokenIsNotValid = errors.New("token is not valid")
+
 type ctxKey int
 
 const (
@@ -24,9 +35,6 @@ func UserIDFromContext(ctx context.Context) (string, bool) {
 func ContextWithUserID(ctx context.Context, userID string) context.Context {
 	return context.WithValue(ctx, userIDKey, userID)
 }
-
-var ErrUnexpectedSigningMethod = errors.New("unexpected signing method")
-var ErrTokenIsNotValid = errors.New("token is not valid")
 
 type Claims struct {
 	jwt.RegisteredClaims
@@ -53,6 +61,30 @@ func GenerateJWTAuthToken(userID string, secretKey []byte) (string, error) {
 		return "", err
 	}
 	return tokenString, nil
+}
+
+func ProccessToken(tokenString string, secretKey []byte) (string, error) {
+	if tokenString != "" {
+		userID, err := ValidateAndParseJWTAuthToken(tokenString, secretKey)
+
+		if err == nil {
+			return userID, nil
+		}
+		if !errors.Is(err, ErrUnexpectedSigningMethod) &&
+			!errors.Is(err, ErrTokenIsNotValid) {
+			return "", fmt.Errorf("cant validate auth token: %w", err)
+		}
+	}
+
+	userID, err := GenerateUserID()
+	if err != nil {
+		return "", fmt.Errorf("cant create user ID: %w", err)
+	}
+	tokenString, err = GenerateJWTAuthToken(userID, secretKey)
+	if err != nil {
+		return "", fmt.Errorf("cant create auth token: %w", err)
+	}
+	return userID, ErrNewTokenRequerd{NewToken: tokenString}
 }
 
 func ValidateAndParseJWTAuthToken(tokenString string, secretKey []byte) (string, error) {

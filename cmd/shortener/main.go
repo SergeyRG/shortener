@@ -6,17 +6,21 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"path"
+	"path/filepath"
 	"syscall"
 	"time"
 
 	"database/sql"
 
+	pb "github.com/SergeyRG/shortener/api/proto/shortener/v1"
 	"github.com/SergeyRG/shortener/internal/config"
 	"github.com/SergeyRG/shortener/internal/events"
+	"github.com/SergeyRG/shortener/internal/grpcserver"
 	"github.com/SergeyRG/shortener/internal/handler"
 	"github.com/SergeyRG/shortener/internal/logging"
 	"github.com/SergeyRG/shortener/internal/middleware"
@@ -28,6 +32,8 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 var (
@@ -135,7 +141,36 @@ func run() error {
 	})
 
 	r := initRouter(svc, db, cfg, requestAuditor)
-	logger.Info("запуск приложения")
+
+	listener, err := net.Listen("tcp", cfg.GRPCServerAddress)
+	if err != nil {
+		return fmt.Errorf("ошибка чтения tcp порта: %v", err)
+	}
+
+	var opts []grpc.ServerOption
+	if cfg.EnableGRPCTLS {
+		exePath, err := os.Executable()
+		if err != nil {
+			return fmt.Errorf("ошибка опеределния пути к исполняемому файлу: %v", err)
+		}
+		exePath = path.Dir(exePath)
+		creds, err := credentials.NewServerTLSFromFile(
+			filepath.Join(exePath, "tls", "cert.pem"),
+			filepath.Join(exePath, "tls", "key.pem"),
+		)
+		if err != nil {
+			return fmt.Errorf("ошибка загрузки сертификатов: %v", err)
+		}
+		opts = append(opts, grpc.Creds(creds))
+	}
+
+	opts = append(opts, grpc.UnaryInterceptor(grpcserver.NewAuthInterceptor(cfg)))
+
+	grpcServer := grpc.NewServer(opts...)
+
+	shortenerService := grpcserver.NewShortenerService(svc)
+
+	pb.RegisterShortenerServiceServer(grpcServer, shortenerService)
 
 	server := &http.Server{
 		Addr:              cfg.ServerAddress,
@@ -145,6 +180,8 @@ func run() error {
 		ReadHeaderTimeout: 2 * time.Second,
 		IdleTimeout:       120 * time.Second,
 	}
+	logger.Info("запуск приложения")
+	logger.Info("запуск Http сервера")
 
 	errg.Go(func() error {
 		var ServerErr error
@@ -156,8 +193,8 @@ func run() error {
 			}
 			logger.Info("Запуск сервера в режиме HTTPS")
 			ServerErr = server.ListenAndServeTLS(
-				path.Join(exePath, "tls", "cert.pem"),
-				path.Join(exePath, "tls", "key.pem"),
+				filepath.Join(exePath, "tls", "cert.pem"),
+				filepath.Join(exePath, "tls", "key.pem"),
 			)
 		} else {
 			logger.Info("Запуск сервера в режиме HTTP")
@@ -165,6 +202,14 @@ func run() error {
 		}
 		if ServerErr != nil && !errors.Is(ServerErr, http.ErrServerClosed) {
 			return fmt.Errorf("критическая ошибка HTTP-сервера: %w", ServerErr)
+		}
+		return nil
+	})
+
+	logger.Info("запуск grpc сервера")
+	errg.Go(func() error {
+		if err := grpcServer.Serve(listener); err != nil {
+			return fmt.Errorf("критическая ошибка GRPC-сервера: %w", err)
 		}
 		return nil
 	})
@@ -179,6 +224,8 @@ func run() error {
 		if err := server.Shutdown(shutdownCtx); err != nil {
 			logger.Error("ошибка при остановке HTTP-сервера", zap.Error(err))
 		}
+
+		grpcServer.GracefulStop()
 
 		svc.Close()
 		return nil
@@ -212,6 +259,7 @@ func initRouter(
 	BatchAddHandler := handler.BatchAddHandler(svc)
 	UserURLHandler := handler.UserURLHandler(svc)
 	UserBatchDeleteHandler := handler.UserBatchDeleteHandler(svc)
+	StatsHandler := handler.StatsHandler(svc)
 
 	authMiddleware := middleware.Auth(cfg)
 
@@ -229,6 +277,7 @@ func initRouter(
 		r.Post("/api/shorten/batch", BatchAddHandler)
 		r.Get("/api/user/urls", UserURLHandler)
 		r.Delete("/api/user/urls", UserBatchDeleteHandler)
+		r.With(middleware.ForTrustedSubnet(cfg)).Get("/api/internal/stats", StatsHandler)
 	})
 	return r
 }

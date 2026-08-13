@@ -25,11 +25,15 @@ require (
 	github.com/rogpeppe/go-internal v1.15.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/mod v0.36.0 // indirect
-	golang.org/x/net v0.54.1-0.20260508232935-23ee2efe81a3 // indirect
+	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/pkgsite v0.1.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
 	golang.org/x/tools v0.45.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
+	google.golang.org/grpc v1.83.0 // indirect
+	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	rsc.io/markdown v0.0.0-20231214224604-88bb533a6020 // indirect
 )

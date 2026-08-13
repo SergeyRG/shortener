@@ -50,6 +50,28 @@ func (r *PSQLDBRepositoryURL) GetByID(ctx context.Context, id string) (model.Sho
 	return data, nil
 }
 
+func (r *PSQLDBRepositoryURL) GetURLSCount(ctx context.Context) (int, error) {
+	query := "SELECT count(*) from urls"
+	row := r.stor.QueryRowContext(ctx, query)
+	var urlsCount int
+	if err := row.Scan(&urlsCount); err != nil {
+		return 0, err
+	}
+
+	return urlsCount, nil
+}
+
+func (r *PSQLDBRepositoryURL) GetUsersCount(ctx context.Context) (int, error) {
+	query := "SELECT count(DISTINCT user_id) AS unique_users_count FROM urls;"
+	row := r.stor.QueryRowContext(ctx, query)
+	var usersCount int
+	if err := row.Scan(&usersCount); err != nil {
+		return 0, err
+	}
+
+	return usersCount, nil
+}
+
 func (r *PSQLDBRepositoryURL) GetByUserID(ctx context.Context, userID string) ([]model.ShortenModel, error) {
 	query := "SELECT id, url, user_id, deleted_flag from urls where user_id = $1"
 	rows, err := r.stor.QueryContext(ctx, query, userID)

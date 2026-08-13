@@ -160,6 +160,14 @@ func (u *URLService) StartDeleteWorker(stopCtx context.Context) {
 	}
 }
 
+func (u *URLService) GetURLSCount(ctx context.Context) (int, error) {
+	return u.repo.GetURLSCount(ctx)
+}
+
+func (u *URLService) GetUsersCount(ctx context.Context) (int, error) {
+	return u.repo.GetUsersCount(ctx)
+}
+
 type URLGenerator struct{}
 
 func (ug URLGenerator) CalculateShortURLID(url string) string {
