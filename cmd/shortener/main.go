@@ -156,7 +156,7 @@ func run() error {
 			filepath.Join(exePath, "tls", "key.pem"),
 		)
 		if err != nil {
-			return fmt.Errorf("Ошибка загрузки сертификатов: %v", err)
+			return fmt.Errorf("ошибка загрузки сертификатов: %v", err)
 		}
 		opts = append(opts, grpc.Creds(creds))
 	}
